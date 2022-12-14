@@ -16,25 +16,41 @@
 package main
 
 import (
+	"f1gopher/ui"
+	"flag"
+	"fmt"
 	"github.com/AllenDang/giu"
+	"github.com/f1gopher/f1gopherlib"
+	"go.uber.org/zap"
+	"os"
 )
 
-var wnd *giu.MasterWindow
-
-func onClickMe() {
-	wnd.SetShouldClose(true)
-}
-
-func loop() {
-	giu.SingleWindow().Layout(
-		giu.Label("Main Menu"),
-		giu.Row(
-			giu.Button("Quit").OnClick(onClickMe),
-		),
-	)
-}
-
 func main() {
-	wnd = giu.NewMasterWindow("F1Gopher", 1024, 768, 0)
-	wnd.Run(loop)
+
+	autoLivePtr := flag.Bool("autoLive", false, "If a live session is in progress display it on startup")
+	logPtr := flag.Bool("log", false, "Enable logging")
+	flag.Parse()
+
+	config := ui.NewConfig()
+
+	var logger *zap.Logger
+	if !*logPtr {
+		logger = zap.NewNop()
+	} else {
+		// Logging goes to stderr for both the library and app
+		logger, _ = zap.NewDevelopment(zap.AddStacktrace(zap.WarnLevel))
+		f1gopherlib.SetLogOutput(os.Stderr)
+	}
+	defer logger.Sync() // flushes buffer, if any
+	sugar := logger.Sugar()
+
+	sugar.Infof("F1Gopher v%s", version)
+
+	wnd := giu.NewMasterWindow(
+		fmt.Sprintf("F1Gopher - v%s", version),
+		1024,
+		768,
+		0)
+	uiManager := ui.Create(sugar, wnd, config, *autoLivePtr)
+	wnd.Run(uiManager.Loop)
 }
