@@ -14,4 +14,6 @@ type Panel interface {
 	ProcessTiming(data Messages.Timing)
 	ProcessEventTime(data Messages.EventTime)
 	ProcessEvent(data Messages.Event)
+	ProcessRaceControlMessages(data Messages.RaceControlMessage)
+	ProcessWeather(data Messages.Weather)
 }

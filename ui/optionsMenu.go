@@ -17,6 +17,7 @@ package ui
 
 import (
 	"github.com/AllenDang/giu"
+	"strings"
 )
 
 type optionsMenu struct {
@@ -26,7 +27,7 @@ type optionsMenu struct {
 
 func (o *optionsMenu) draw(width int, height int) {
 	menuWidth := float32(600.0)
-	menuHeight := float32(200.0)
+	menuHeight := float32(330.0)
 	posX := (float32(width) - menuWidth) / 2
 	posY := (float32(height) - menuHeight) / 2
 
@@ -42,6 +43,13 @@ func (o *optionsMenu) draw(width int, height int) {
 			giu.InputInt(&o.config.liveDelay).Size(20).Label("Live Delay (in seconds)"),
 			giu.Checkbox("Cache Replay Data", &o.config.useCache),
 			giu.InputText(&o.config.cacheFolder).Label("Replay Cache Folder"),
+			giu.Dummy(1, 20),
+			giu.Checkbox("Web Timing View Enabled", &o.config.webTimingViewEnabled),
+			giu.Label("Web Timing View Addresses:"),
+			// Indent the addresses
+			giu.Label("      "+strings.Join(o.config.webTimingAddresses, ", ")),
+			giu.InputInt(&o.config.webTimingPort).Size(40).Label("Web Timing View Port"),
+			giu.Dummy(1, 20),
 			giu.Checkbox("Show Debug Replay", &o.config.showDebugReplay),
 			giu.Dummy(1, 20),
 			giu.Button("Back").OnClick(func() {

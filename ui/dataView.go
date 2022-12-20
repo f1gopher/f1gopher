@@ -51,6 +51,12 @@ func (d *dataView) draw(width int, height int) {
 
 	for x := range d.panels {
 		title, widgets := d.panels[x].Draw()
+
+		// Not all panels display something (web timing view)
+		if widgets == nil {
+			continue
+		}
+
 		w := giu.Window(title).
 			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 			Pos(xPos, yPos)
@@ -83,6 +89,16 @@ func (d *dataView) processData() {
 		case msg := <-d.dataSrc.Time():
 			for x := range d.panels {
 				d.panels[x].ProcessEventTime(msg)
+			}
+
+		case msg := <-d.dataSrc.RaceControlMessages():
+			for x := range d.panels {
+				d.panels[x].ProcessRaceControlMessages(msg)
+			}
+
+		case msg := <-d.dataSrc.Weather():
+			for x := range d.panels {
+				d.panels[x].ProcessWeather(msg)
 			}
 		}
 

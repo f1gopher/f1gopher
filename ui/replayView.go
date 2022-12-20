@@ -23,7 +23,7 @@ type replayView struct {
 	dataView
 }
 
-func createReplayView(changeView func(newView screen, info any)) dataScreen {
+func createReplayView(webView panel.Panel, changeView func(newView screen, info any)) dataScreen {
 	view := replayView{
 		dataView{
 			changeView: changeView,
@@ -33,6 +33,8 @@ func createReplayView(changeView func(newView screen, info any)) dataScreen {
 			},
 		},
 	}
+
+	view.panels = append(view.panels, webView)
 
 	return &view
 }

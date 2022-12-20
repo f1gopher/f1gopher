@@ -42,6 +42,9 @@ func (i *information) ProcessEvent(data Messages.Event) {
 	i.eventLock.Unlock()
 }
 
+func (i *information) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
+func (i *information) ProcessWeather(data Messages.Weather)                        {}
+
 func (i *information) Draw() (title string, widgets []giu.Widget) {
 
 	panelWidgets := []giu.Widget{

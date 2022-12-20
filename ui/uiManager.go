@@ -17,6 +17,7 @@ package ui
 
 import (
 	"context"
+	"f1gopher/ui/webTimingView"
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/parser"
@@ -63,6 +64,8 @@ type Manager struct {
 	replay      dataScreen
 	debugReplay dataScreen
 
+	webTiming *webTimingView.WebTiming
+
 	shutdownWg  sync.WaitGroup
 	ctxShutdown context.CancelFunc
 	ctx         context.Context
@@ -102,8 +105,14 @@ func Create(logger *zap.SugaredLogger, wnd *giu.MasterWindow, config config, aut
 		changeView: manager.changeView,
 		config:     &manager.config,
 	}
+
+	manager.webTiming = webTimingView.CreateWebTimingView(manager.shutdownWg, manager.ctx, config.webTimingAddresses)
+	if manager.config.webTimingViewEnabled {
+		manager.webTiming.Start()
+	}
+
 	manager.live = &liveView{dataView{changeView: manager.changeView}}
-	manager.replay = createReplayView(manager.changeView)
+	manager.replay = createReplayView(manager.webTiming, manager.changeView)
 	manager.debugReplay = &debugReplayView{dataView{changeView: manager.changeView}}
 
 	// Redraw the main menu screen every second to update the countdown and current session UI
@@ -155,6 +164,23 @@ func (u *Manager) Loop() {
 }
 
 func (u *Manager) changeView(newView screen, info any) {
+
+	// If we are stopping a dataview then clear the web timing display
+	if (u.view == Live && newView != Live) ||
+		(u.view == Replay && newView != Replay) ||
+		(u.view == DebugReplay && newView != DebugReplay) {
+		u.webTiming.Pause()
+	}
+
+	// If we have edited the config then check if we need to enable/disable the web display
+	if u.view == OptionsMenu && newView != OptionsMenu {
+		if u.config.webTimingViewEnabled {
+			u.webTiming.Start()
+		} else {
+			u.webTiming.Stop()
+		}
+	}
+
 	switch newView {
 	case Live:
 		u.currentSession = info.(*f1gopherlib.RaceEvent)

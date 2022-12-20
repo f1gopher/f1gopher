@@ -25,6 +25,8 @@ type timing struct {
 	theoreticalFastestLap time.Duration
 	previousSessionActive Messages.SessionState
 	fastestSpeedTrap      int
+
+	gapToInfront bool
 }
 
 const timeWidth = 75
@@ -35,7 +37,9 @@ func CreateTiming() Panel {
 	}
 }
 
-func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib) {}
+func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib) {
+	t.gapToInfront = dataSrc.Session() == Messages.RaceSession || dataSrc.Session() == Messages.SprintSession
+}
 
 func (t *timing) ProcessTiming(data Messages.Timing) {
 	t.dataLock.Lock()
@@ -50,6 +54,9 @@ func (t *timing) ProcessEvent(data Messages.Event) {
 	t.event = data
 	t.eventLock.Unlock()
 }
+
+func (t *timing) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
+func (t *timing) ProcessWeather(data Messages.Weather)                        {}
 
 func (t *timing) Draw() (title string, widgets []giu.Widget) {
 
@@ -117,6 +124,12 @@ func (t *timing) Draw() (title string, widgets []giu.Widget) {
 			}
 		}
 
+		// Gap
+		gap := drivers[x].TimeDiffToFastest
+		if t.gapToInfront {
+			gap = drivers[x].TimeDiffToPositionAhead
+		}
+
 		rows = append(rows, giu.TableRow(
 			giu.Label(fmt.Sprintf("%d", drivers[x].Position)),
 			giu.Style().SetColor(giu.StyleColorText, drivers[x].Color).To(
@@ -126,7 +139,7 @@ func (t *timing) Draw() (title string, widgets []giu.Widget) {
 
 			giu.Style().SetColor(giu.StyleColorText, fastestLapColor(drivers[x].OverallFastestLap)).To(
 				giu.Label(fmtDuration(drivers[x].FastestLap))),
-			giu.Label(fmtDuration(drivers[x].GapToLeader)),
+			giu.Label(fmtDuration(gap)),
 			giu.Style().SetColor(giu.StyleColorText, timeColor(drivers[x].Sector1PersonalFastest, drivers[x].Sector1OverallFastest)).To(
 				giu.Label(fmtDuration(drivers[x].Sector1))),
 			giu.Style().SetColor(giu.StyleColorText, timeColor(drivers[x].Sector2PersonalFastest, drivers[x].Sector2OverallFastest)).To(
