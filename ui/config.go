@@ -32,8 +32,8 @@ func NewConfig() config {
 	return config{
 		autoplayLive:    false,
 		liveDelay:       0,
-		useCache:        false,
-		cacheFolder:     "./cache",
+		useCache:        true,
+		cacheFolder:     "./.cache",
 		showDebugReplay: false,
 	}
 }

@@ -15,6 +15,14 @@ github.com/f1gopher/f1gopherlib v0.9.0 h1:gOdjUbQFJkUEzzDkDe1gR2Kf5uMzUJrHDEVDGY
 github.com/f1gopher/f1gopherlib v0.9.0/go.mod h1:TVPPbzyyaNFnf6eAblIKzbaVG7c0EY9U6ARR73xD0m4=
 github.com/f1gopher/f1gopherlib v0.9.1-0.20221214163543-4eae629fa625 h1:WcRL5Sxo1VclqdDwtOER0UsnTVZiY5KPMyjIEzy4n8w=
 github.com/f1gopher/f1gopherlib v0.9.1-0.20221214163543-4eae629fa625/go.mod h1:TVPPbzyyaNFnf6eAblIKzbaVG7c0EY9U6ARR73xD0m4=
+github.com/f1gopher/f1gopherlib v0.9.1-0.20221218114223-c3215d38a00a h1:bsblwpZOurWeEk5ZZs37ztPJUKFHWEHGG+YqkhqpkYI=
+github.com/f1gopher/f1gopherlib v0.9.1-0.20221218114223-c3215d38a00a/go.mod h1:TVPPbzyyaNFnf6eAblIKzbaVG7c0EY9U6ARR73xD0m4=
+github.com/f1gopher/f1gopherlib v0.9.1-0.20221218144610-d2932faa0a5a h1:M0quijdFt1rtkFBeG3cnrCWPG7Dtf1vh13n802ikAuQ=
+github.com/f1gopher/f1gopherlib v0.9.1-0.20221218144610-d2932faa0a5a/go.mod h1:TVPPbzyyaNFnf6eAblIKzbaVG7c0EY9U6ARR73xD0m4=
+github.com/f1gopher/f1gopherlib v0.9.1-0.20221218144836-506048c6b17b h1:FwaSrxrfnXzquKcG9vdscJIK+sCwcTlw9YH6EXYb2Rc=
+github.com/f1gopher/f1gopherlib v0.9.1-0.20221218144836-506048c6b17b/go.mod h1:TVPPbzyyaNFnf6eAblIKzbaVG7c0EY9U6ARR73xD0m4=
+github.com/f1gopher/f1gopherlib v0.9.1-0.20221218165721-0c056338cb0c h1:ZsvFGghVOUOifyYt4IRGgXGYxNcgHnbagtCGrOHv6MQ=
+github.com/f1gopher/f1gopherlib v0.9.1-0.20221218165721-0c056338cb0c/go.mod h1:TVPPbzyyaNFnf6eAblIKzbaVG7c0EY9U6ARR73xD0m4=
 github.com/f1gopher/signalr/v2 v2.0.0-20221210121059-1985aaf5fb97 h1:ake47TNb+vBn+r4dlB23hh6J/Hi0AZraq28ZaQrKBoQ=
 github.com/f1gopher/signalr/v2 v2.0.0-20221210121059-1985aaf5fb97/go.mod h1:I+Wlu0JSNF8jkGxWKW6X6B1hlLM/fMcJq23drxf3MkE=
 github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3 h1:baVdMKlASEHrj19iqjARrPbaRisD7EuZEVJj6ZMLl1Q=

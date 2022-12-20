@@ -15,6 +15,24 @@
 
 package ui
 
+import (
+	"f1gopher/ui/panel"
+)
+
 type replayView struct {
 	dataView
+}
+
+func createReplayView(changeView func(newView screen, info any)) dataScreen {
+	view := replayView{
+		dataView{
+			changeView: changeView,
+			panels: []panel.Panel{
+				panel.CreateInformation(func() { changeView(MainMenu, nil) }),
+				panel.CreateTiming(),
+			},
+		},
+	}
+
+	return &view
 }

@@ -16,25 +16,77 @@
 package ui
 
 import (
-	"fmt"
+	"f1gopher/ui/panel"
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
+	"github.com/f1gopher/f1gopherlib/Messages"
+	"sync"
 )
 
 type dataView struct {
 	dataSrc f1gopherlib.F1GopherLib
 
 	changeView func(newView screen, info any)
+
+	panels []panel.Panel
+
+	event     Messages.Event
+	eventLock sync.Mutex
 }
 
 func (d *dataView) init(dataSrc f1gopherlib.F1GopherLib) {
 	d.dataSrc = dataSrc
+
+	for x := range d.panels {
+		d.panels[x].Init(dataSrc)
+	}
+
+	// Listen for and handle data messages in the background
+	go d.processData()
 }
 
 func (d *dataView) draw(width int, height int) {
-	giu.SingleWindow().Layout(
-		giu.Label(fmt.Sprintf("%s - %s", d.dataSrc.Name(), d.dataSrc.Session().String())),
+	var xPos float32 = 0.0
+	var yPos float32 = 0.0
 
-		giu.Button("Back").OnClick(func() { d.changeView(MainMenu, nil) }),
-	)
+	for x := range d.panels {
+		title, widgets := d.panels[x].Draw()
+		w := giu.Window(title).
+			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+			Pos(xPos, yPos)
+		w.Layout(widgets...)
+
+		// Make the panels stack vertically with no overlap
+		_, panelHeight := w.CurrentSize()
+		yPos += panelHeight
+	}
+}
+
+func (d *dataView) processData() {
+
+	for {
+		select {
+		case msg := <-d.dataSrc.Timing():
+			for x := range d.panels {
+				d.panels[x].ProcessTiming(msg)
+			}
+
+		case msg := <-d.dataSrc.Event():
+			d.eventLock.Lock()
+			d.event = msg
+			d.eventLock.Unlock()
+
+			for x := range d.panels {
+				d.panels[x].ProcessEvent(msg)
+			}
+
+		case msg := <-d.dataSrc.Time():
+			for x := range d.panels {
+				d.panels[x].ProcessEventTime(msg)
+			}
+		}
+
+		// Data has changed so force a UI redraw
+		giu.Update()
+	}
 }
