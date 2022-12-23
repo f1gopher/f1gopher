@@ -8,6 +8,7 @@ import (
 
 type Panel interface {
 	Init(dataSrc f1gopherlib.F1GopherLib)
+	Close()
 
 	Draw() (title string, widgets []giu.Widget)
 
@@ -16,4 +17,5 @@ type Panel interface {
 	ProcessEvent(data Messages.Event)
 	ProcessRaceControlMessages(data Messages.RaceControlMessage)
 	ProcessWeather(data Messages.Weather)
+	ProcessRadio(data Messages.Radio)
 }

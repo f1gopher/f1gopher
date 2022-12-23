@@ -48,6 +48,8 @@ func (i *information) ProcessEvent(data Messages.Event) {
 
 func (i *information) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
 func (i *information) ProcessWeather(data Messages.Weather)                        {}
+func (i *information) ProcessRadio(data Messages.Radio)                            {}
+func (i *information) Close()                                                      {}
 
 func (i *information) Draw() (title string, widgets []giu.Widget) {
 

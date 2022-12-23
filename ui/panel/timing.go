@@ -66,6 +66,8 @@ func (t *timing) ProcessEvent(data Messages.Event) {
 
 func (t *timing) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
 func (t *timing) ProcessWeather(data Messages.Weather)                        {}
+func (t *timing) ProcessRadio(data Messages.Radio)                            {}
+func (t *timing) Close()                                                      {}
 
 func (t *timing) Draw() (title string, widgets []giu.Widget) {
 

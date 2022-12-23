@@ -134,6 +134,8 @@ func (w *WebTiming) Init(dataSrc f1gopherlib.F1GopherLib) {
 	w.gapToInfront = w.raceSession
 }
 
+func (w *WebTiming) Close() {}
+
 func (w *WebTiming) ProcessTiming(data Messages.Timing) {
 	w.dataLock.Lock()
 	w.data[data.Number] = data
@@ -162,6 +164,8 @@ func (w *WebTiming) ProcessWeather(data Messages.Weather) {
 	w.weather = data
 	w.weatherLock.Unlock()
 }
+
+func (w *WebTiming) ProcessRadio(data Messages.Radio) {}
 
 func (w *WebTiming) Draw() (title string, widgets []giu.Widget) {
 	return "Web Timing", nil

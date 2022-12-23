@@ -29,13 +29,12 @@ func (w *weather) Init(dataSrc f1gopherlib.F1GopherLib) {
 	w.data = Messages.Weather{}
 }
 
-func (w *weather) ProcessTiming(data Messages.Timing) {}
-
-func (w *weather) ProcessEventTime(data Messages.EventTime) {}
-
-func (w *weather) ProcessEvent(data Messages.Event) {}
-
+func (w *weather) ProcessTiming(data Messages.Timing)                          {}
+func (w *weather) ProcessEventTime(data Messages.EventTime)                    {}
+func (w *weather) ProcessEvent(data Messages.Event)                            {}
 func (w *weather) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
+func (w *weather) ProcessRadio(data Messages.Radio)                            {}
+func (w *weather) Close()                                                      {}
 
 func (w *weather) ProcessWeather(data Messages.Weather) {
 	w.dataLock.Lock()
@@ -58,8 +57,8 @@ func (w *weather) widgets() []giu.Widget {
 
 	w.dataLock.Lock()
 
-	if !w.data.Rainfall {
-		widgets = append(widgets, giu.Style().SetColor(giu.StyleColorText, colornames.Blue).To(giu.Label("It is raining️")))
+	if w.data.Rainfall {
+		widgets = append(widgets, giu.Style().SetColor(giu.StyleColorText, colornames.Cornflowerblue).To(giu.Label("Rain")))
 	} else {
 		widgets = append(widgets, giu.Label("No rain"))
 	}

@@ -46,6 +46,7 @@ type dataScreen interface {
 	drawableScreen
 
 	init(dataSrc f1gopherlib.F1GopherLib)
+	close()
 }
 
 type Manager struct {
@@ -166,9 +167,18 @@ func (u *Manager) Loop() {
 func (u *Manager) changeView(newView screen, info any) {
 
 	// If we are stopping a dataview then clear the web timing display
-	if (u.view == Live && newView != Live) ||
-		(u.view == Replay && newView != Replay) ||
-		(u.view == DebugReplay && newView != DebugReplay) {
+	if u.view == Live && newView != Live {
+		u.live.close()
+		u.webTiming.Pause()
+	}
+
+	if u.view == Replay && newView != Replay {
+		u.replay.close()
+		u.webTiming.Pause()
+	}
+
+	if u.view == DebugReplay && newView != DebugReplay {
+		u.debugReplay.close()
 		u.webTiming.Pause()
 	}
 
@@ -238,6 +248,17 @@ func (u *Manager) mainMenuRefresh() {
 
 func (u *Manager) shutdown() {
 	u.logger.Infoln("Shutting down...")
+
+	// Tell the currently displayed (if any) view/panels to close
+	if u.view == Live {
+		u.live.close()
+	}
+	if u.view == Replay {
+		u.replay.close()
+	}
+	if u.view == DebugReplay {
+		u.debugReplay.close()
+	}
 
 	// Tell all go routines to shutdown and wait for them to complete
 	u.ctxShutdown()

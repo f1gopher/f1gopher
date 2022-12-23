@@ -46,6 +46,8 @@ func (r *raceControlMessages) ProcessRaceControlMessages(data Messages.RaceContr
 }
 
 func (r *raceControlMessages) ProcessWeather(data Messages.Weather) {}
+func (r *raceControlMessages) ProcessRadio(data Messages.Radio)     {}
+func (r *raceControlMessages) Close()                               {}
 
 func (r *raceControlMessages) Draw() (title string, widgets []giu.Widget) {
 

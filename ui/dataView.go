@@ -16,6 +16,7 @@
 package ui
 
 import (
+	"context"
 	"f1gopher/ui/panel"
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
@@ -24,6 +25,9 @@ import (
 )
 
 type dataView struct {
+	ctxShutdown context.CancelFunc
+	ctx         context.Context
+
 	dataSrc f1gopherlib.F1GopherLib
 
 	changeView func(newView screen, info any)
@@ -36,6 +40,7 @@ type dataView struct {
 
 func (d *dataView) init(dataSrc f1gopherlib.F1GopherLib) {
 	d.dataSrc = dataSrc
+	d.ctx, d.ctxShutdown = context.WithCancel(context.Background())
 
 	for x := range d.panels {
 		d.panels[x].Init(dataSrc)
@@ -43,6 +48,22 @@ func (d *dataView) init(dataSrc f1gopherlib.F1GopherLib) {
 
 	// Listen for and handle data messages in the background
 	go d.processData()
+}
+
+func (d *dataView) close() {
+	if d.ctxShutdown != nil {
+		d.ctxShutdown()
+	}
+
+	for x := range d.panels {
+		d.panels[x].Close()
+	}
+
+	// Reset for the next session
+	d.event = Messages.Event{}
+	d.dataSrc = nil
+	d.ctx = nil
+	d.ctxShutdown = nil
 }
 
 func (d *dataView) draw(width int, height int) {
@@ -72,6 +93,9 @@ func (d *dataView) processData() {
 
 	for {
 		select {
+		case <-d.ctx.Done():
+			return
+
 		case msg := <-d.dataSrc.Timing():
 			for x := range d.panels {
 				d.panels[x].ProcessTiming(msg)
@@ -99,6 +123,11 @@ func (d *dataView) processData() {
 		case msg := <-d.dataSrc.Weather():
 			for x := range d.panels {
 				d.panels[x].ProcessWeather(msg)
+			}
+
+		case msg := <-d.dataSrc.Radio():
+			for x := range d.panels {
+				d.panels[x].ProcessRadio(msg)
 			}
 		}
 
