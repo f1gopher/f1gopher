@@ -25,6 +25,13 @@ func CreateInformation(exit func()) Panel {
 	}
 }
 
+func (i *information) ProcessTiming(data Messages.Timing)                          {}
+func (i *information) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
+func (i *information) ProcessWeather(data Messages.Weather)                        {}
+func (i *information) ProcessRadio(data Messages.Radio)                            {}
+func (i *information) ProcessLocation(data Messages.Location)                      {}
+func (i *information) Close()                                                      {}
+
 func (i *information) Init(dataSrc f1gopherlib.F1GopherLib) {
 	i.dataSrc = dataSrc
 
@@ -32,8 +39,6 @@ func (i *information) Init(dataSrc f1gopherlib.F1GopherLib) {
 	i.event = Messages.Event{}
 	i.remainingTime = 0
 }
-
-func (i *information) ProcessTiming(data Messages.Timing) {}
 
 func (i *information) ProcessEventTime(data Messages.EventTime) {
 	i.eventTime = data.Timestamp
@@ -45,11 +50,6 @@ func (i *information) ProcessEvent(data Messages.Event) {
 	i.event = data
 	i.eventLock.Unlock()
 }
-
-func (i *information) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
-func (i *information) ProcessWeather(data Messages.Weather)                        {}
-func (i *information) ProcessRadio(data Messages.Radio)                            {}
-func (i *information) Close()                                                      {}
 
 func (i *information) Draw() (title string, widgets []giu.Widget) {
 

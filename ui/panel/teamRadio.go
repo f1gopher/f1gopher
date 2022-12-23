@@ -30,6 +30,13 @@ func CreateTeamRadio() Panel {
 	return &teamRadio{}
 }
 
+func (t *teamRadio) ProcessTiming(data Messages.Timing)                          {}
+func (t *teamRadio) ProcessEventTime(data Messages.EventTime)                    {}
+func (t *teamRadio) ProcessEvent(data Messages.Event)                            {}
+func (t *teamRadio) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
+func (t *teamRadio) ProcessWeather(data Messages.Weather)                        {}
+func (t *teamRadio) ProcessLocation(data Messages.Location)                      {}
+
 func (t *teamRadio) Init(dataSrc f1gopherlib.F1GopherLib) {
 	// Clear previous session data
 	t.radioName = noRadioMessage
@@ -48,12 +55,6 @@ func (t *teamRadio) Init(dataSrc f1gopherlib.F1GopherLib) {
 
 	go t.playTeamRadio()
 }
-
-func (t *teamRadio) ProcessTiming(data Messages.Timing)                          {}
-func (t *teamRadio) ProcessEventTime(data Messages.EventTime)                    {}
-func (t *teamRadio) ProcessEvent(data Messages.Event)                            {}
-func (t *teamRadio) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
-func (t *teamRadio) ProcessWeather(data Messages.Weather)                        {}
 
 func (t *teamRadio) ProcessRadio(data Messages.Radio) {
 	t.radioMsgsLock.Lock()

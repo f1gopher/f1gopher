@@ -33,6 +33,7 @@ func createReplayView(webView panel.Panel, changeView func(newView screen, info 
 				panel.CreateRaceControlMessages(),
 				panel.CreateWeather(),
 				panel.CreateTeamRadio(),
+				panel.CreateTrackMap(),
 			},
 		},
 	}

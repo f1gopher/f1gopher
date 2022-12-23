@@ -26,6 +26,14 @@ func CreateRaceControlMessages() Panel {
 	}
 }
 
+func (r *raceControlMessages) ProcessTiming(data Messages.Timing)       {}
+func (r *raceControlMessages) ProcessEventTime(data Messages.EventTime) {}
+func (r *raceControlMessages) ProcessEvent(data Messages.Event)         {}
+func (r *raceControlMessages) ProcessWeather(data Messages.Weather)     {}
+func (r *raceControlMessages) ProcessRadio(data Messages.Radio)         {}
+func (r *raceControlMessages) ProcessLocation(data Messages.Location)   {}
+func (r *raceControlMessages) Close()                                   {}
+
 func (r *raceControlMessages) Init(dataSrc f1gopherlib.F1GopherLib) {
 	r.dataSrc = dataSrc
 
@@ -34,20 +42,12 @@ func (r *raceControlMessages) Init(dataSrc f1gopherlib.F1GopherLib) {
 	r.cachedUI = make([]giu.Widget, 0)
 }
 
-func (r *raceControlMessages) ProcessTiming(data Messages.Timing)       {}
-func (r *raceControlMessages) ProcessEventTime(data Messages.EventTime) {}
-func (r *raceControlMessages) ProcessEvent(data Messages.Event)         {}
-
 func (r *raceControlMessages) ProcessRaceControlMessages(data Messages.RaceControlMessage) {
 	r.rcMessagesLock.Lock()
 	r.rcMessages = append(r.rcMessages, data)
 	r.rcMessagesLock.Unlock()
 	r.dataChanged.Store(true)
 }
-
-func (r *raceControlMessages) ProcessWeather(data Messages.Weather) {}
-func (r *raceControlMessages) ProcessRadio(data Messages.Radio)     {}
-func (r *raceControlMessages) Close()                               {}
 
 func (r *raceControlMessages) Draw() (title string, widgets []giu.Widget) {
 

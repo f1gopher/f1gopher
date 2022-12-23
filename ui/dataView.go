@@ -129,6 +129,11 @@ func (d *dataView) processData() {
 			for x := range d.panels {
 				d.panels[x].ProcessRadio(msg)
 			}
+
+		case msg := <-d.dataSrc.Location():
+			for x := range d.panels {
+				d.panels[x].ProcessLocation(msg)
+			}
 		}
 
 		// Data has changed so force a UI redraw

@@ -34,6 +34,7 @@ func (w *weather) ProcessEventTime(data Messages.EventTime)                    {
 func (w *weather) ProcessEvent(data Messages.Event)                            {}
 func (w *weather) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
 func (w *weather) ProcessRadio(data Messages.Radio)                            {}
+func (w *weather) ProcessLocation(data Messages.Location)                      {}
 func (w *weather) Close()                                                      {}
 
 func (w *weather) ProcessWeather(data Messages.Weather) {

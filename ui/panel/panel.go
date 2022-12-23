@@ -18,4 +18,5 @@ type Panel interface {
 	ProcessRaceControlMessages(data Messages.RaceControlMessage)
 	ProcessWeather(data Messages.Weather)
 	ProcessRadio(data Messages.Radio)
+	ProcessLocation(data Messages.Location)
 }

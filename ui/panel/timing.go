@@ -37,6 +37,13 @@ func CreateTiming() Panel {
 	}
 }
 
+func (t *timing) ProcessEventTime(data Messages.EventTime)                    {}
+func (t *timing) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
+func (t *timing) ProcessWeather(data Messages.Weather)                        {}
+func (t *timing) ProcessRadio(data Messages.Radio)                            {}
+func (t *timing) ProcessLocation(data Messages.Location)                      {}
+func (t *timing) Close()                                                      {}
+
 func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib) {
 	t.gapToInfront = dataSrc.Session() == Messages.RaceSession || dataSrc.Session() == Messages.SprintSession
 
@@ -56,18 +63,11 @@ func (t *timing) ProcessTiming(data Messages.Timing) {
 	t.dataLock.Unlock()
 }
 
-func (t *timing) ProcessEventTime(data Messages.EventTime) {}
-
 func (t *timing) ProcessEvent(data Messages.Event) {
 	t.eventLock.Lock()
 	t.event = data
 	t.eventLock.Unlock()
 }
-
-func (t *timing) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
-func (t *timing) ProcessWeather(data Messages.Weather)                        {}
-func (t *timing) ProcessRadio(data Messages.Radio)                            {}
-func (t *timing) Close()                                                      {}
 
 func (t *timing) Draw() (title string, widgets []giu.Widget) {
 
