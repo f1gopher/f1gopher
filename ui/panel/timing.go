@@ -39,6 +39,15 @@ func CreateTiming() Panel {
 
 func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib) {
 	t.gapToInfront = dataSrc.Session() == Messages.RaceSession || dataSrc.Session() == Messages.SprintSession
+
+	// Clear any previous session data
+	t.data = make(map[int]Messages.Timing)
+	t.fastestSector1 = 0
+	t.fastestSector2 = 0
+	t.fastestSector3 = 0
+	t.theoreticalFastestLap = 0
+	t.previousSessionActive = Messages.UnknownState
+	t.fastestSpeedTrap = 0
 }
 
 func (t *timing) ProcessTiming(data Messages.Timing) {

@@ -30,6 +30,8 @@ func createReplayView(webView panel.Panel, changeView func(newView screen, info 
 			panels: []panel.Panel{
 				panel.CreateInformation(func() { changeView(MainMenu, nil) }),
 				panel.CreateTiming(),
+				panel.CreateRaceControlMessages(),
+				panel.CreateWeather(),
 			},
 		},
 	}

@@ -27,6 +27,10 @@ func CreateInformation(exit func()) Panel {
 
 func (i *information) Init(dataSrc f1gopherlib.F1GopherLib) {
 	i.dataSrc = dataSrc
+
+	// Clear previous session data
+	i.event = Messages.Event{}
+	i.remainingTime = 0
 }
 
 func (i *information) ProcessTiming(data Messages.Timing) {}
