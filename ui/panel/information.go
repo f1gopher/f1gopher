@@ -53,6 +53,11 @@ func (i *information) ProcessEvent(data Messages.Event) {
 
 func (i *information) Draw() (title string, widgets []giu.Widget) {
 
+	pauseTxt := "Pause"
+	if i.dataSrc.IsPaused() {
+		pauseTxt = "Resume"
+	}
+
 	panelWidgets := []giu.Widget{
 		i.infoWidgets(),
 
@@ -63,6 +68,9 @@ func (i *information) Draw() (title string, widgets []giu.Widget) {
 			}),
 			giu.Button("Skip Minute").OnClick(func() {
 				i.dataSrc.IncrementTime(time.Minute * 1)
+			}),
+			giu.Button(pauseTxt).OnClick(func() {
+				i.dataSrc.TogglePause()
 			}),
 			giu.Button("Back").OnClick(func() {
 				i.exit()
@@ -82,7 +90,7 @@ func (i *information) infoWidgets() *giu.RowWidget {
 	i.eventLock.Lock()
 	defer i.eventLock.Unlock()
 
-	return giu.Row(
+	widgets := []giu.Widget{
 		giu.Label(fmt.Sprintf(
 			"%s: %v, Track Time: %v, Status:",
 			i.dataSrc.Name(),
@@ -90,15 +98,27 @@ func (i *information) infoWidgets() *giu.RowWidget {
 			i.eventTime.In(i.dataSrc.CircuitTimezone()).Format("2006-01-02 15:04:05"))),
 		giu.Style().SetColor(giu.StyleColorText, sessionStatusColor(i.event.Status)).To(
 			giu.Label(i.event.TrackStatus.String())),
-		giu.Label(fmt.Sprintf(", DRS: %v, Safety Car:",
-			i.event.DRSEnabled.String())),
-		giu.Style().SetColor(giu.StyleColorText, safetyCarFormat(i.event.SafetyCar)).To(
-			giu.Label(i.event.SafetyCar.String())),
-		giu.Label(fmt.Sprintf(", Lap: %d/%d, Remaining: %s",
-			i.event.CurrentLap,
-			i.event.TotalLaps,
-			remaining)),
-		giu.Style().SetColor(giu.StyleColorText, trackStatusColor(i.event.TrackStatus)).To(
-			giu.Label("⚑")),
-	)
+	}
+
+	// These are only relevant for a race session
+	if i.event.Type == Messages.Race || i.event.Type == Messages.Sprint {
+		widgets = append(widgets,
+			giu.Label(fmt.Sprintf(", DRS: %v, Safety Car:",
+				i.event.DRSEnabled.String())))
+
+		widgets = append(widgets,
+			giu.Style().SetColor(giu.StyleColorText, safetyCarFormat(i.event.SafetyCar)).To(
+				giu.Label(i.event.SafetyCar.String())))
+
+		widgets = append(widgets,
+			giu.Label(fmt.Sprintf(", Lap: %d/%d, Remaining: %s",
+				i.event.CurrentLap,
+				i.event.TotalLaps,
+				remaining)))
+	}
+
+	widgets = append(widgets, giu.Style().SetColor(giu.StyleColorText, trackStatusColor(i.event.TrackStatus)).To(
+		giu.Label("⚑")))
+
+	return giu.Row(widgets...)
 }

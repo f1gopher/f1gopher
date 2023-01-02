@@ -17,9 +17,7 @@ package ui
 
 import (
 	"fmt"
-	"github.com/f1gopher/f1gopherlib"
 	"net"
-	"path"
 )
 
 type config struct {
@@ -52,12 +50,12 @@ func NewConfig() config {
 	return c
 }
 
-func (c *config) sessionCache(session *f1gopherlib.RaceEvent) string {
+func (c *config) sessionCache() string {
 	if !c.useCache {
 		return ""
 	}
 
-	return path.Join(c.cacheFolder, session.Name, session.Type.String())
+	return c.cacheFolder
 }
 
 func (c *config) getLocalIP() []string {

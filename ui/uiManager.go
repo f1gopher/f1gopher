@@ -20,6 +20,7 @@ import (
 	"f1gopher/ui/webTimingView"
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
+	"github.com/f1gopher/f1gopherlib/flowControl"
 	"github.com/f1gopher/f1gopherlib/parser"
 	"go.uber.org/zap"
 	"sync"
@@ -72,7 +73,8 @@ type Manager struct {
 	ctx         context.Context
 }
 
-const dataSources = parser.EventTime | parser.Timing | parser.Event | parser.RaceControl | parser.TeamRadio | parser.Weather
+const dataSources = parser.EventTime | parser.Timing | parser.Event | parser.RaceControl |
+	parser.TeamRadio | parser.Weather | parser.Location
 
 func Create(logger *zap.SugaredLogger, wnd *giu.MasterWindow, config config, autoLive bool) *Manager {
 	manager := Manager{
@@ -194,7 +196,7 @@ func (u *Manager) changeView(newView screen, info any) {
 	switch newView {
 	case Live:
 		u.currentSession = info.(*f1gopherlib.RaceEvent)
-		data, err := f1gopherlib.CreateLive(dataSources, "", u.config.sessionCache(u.currentSession))
+		data, err := f1gopherlib.CreateLive(dataSources, "", u.config.sessionCache())
 		if err != nil {
 			u.logger.Errorln("Starting live session", err)
 			return
@@ -203,7 +205,12 @@ func (u *Manager) changeView(newView screen, info any) {
 
 	case Replay:
 		u.currentSession = info.(*f1gopherlib.RaceEvent)
-		data, err := f1gopherlib.CreateReplay(dataSources, *u.currentSession, u.config.sessionCache(u.currentSession))
+		data, err := f1gopherlib.CreateReplay(
+			dataSources,
+			*u.currentSession,
+			u.config.sessionCache(),
+			flowControl.Realtime)
+		
 		if err != nil {
 			u.logger.Errorln("Starting replay session", err)
 			return
@@ -212,7 +219,7 @@ func (u *Manager) changeView(newView screen, info any) {
 
 	case DebugReplay:
 		u.debugReplayFile = info.(string)
-		data, err := f1gopherlib.CreateDebugReplay(dataSources, u.debugReplayFile)
+		data, err := f1gopherlib.CreateDebugReplay(dataSources, u.debugReplayFile, flowControl.Realtime)
 		if err != nil {
 			u.logger.Errorln("Starting debug replay session", err)
 			return

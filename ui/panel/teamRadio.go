@@ -24,7 +24,7 @@ type teamRadio struct {
 	isMuted bool
 }
 
-const noRadioMessage = "<nothing>"
+const noRadioMessage = "<no one>"
 
 func CreateTeamRadio() Panel {
 	return &teamRadio{}

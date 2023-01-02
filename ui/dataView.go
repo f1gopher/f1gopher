@@ -78,9 +78,18 @@ func (d *dataView) draw(width int, height int) {
 			continue
 		}
 
-		w := giu.Window(title).
-			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
-			Pos(xPos, yPos)
+		var w *giu.WindowWidget
+		if title == "Track Map" {
+			w = giu.Window(title).
+				Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+				Pos(xPos, yPos).
+				Size(500, 500)
+		} else {
+			w = giu.Window(title).
+				Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+				Pos(xPos, yPos)
+		}
+
 		w.Layout(widgets...)
 
 		// Make the panels stack vertically with no overlap
