@@ -20,7 +20,7 @@ func (b blah) Write(p []byte) (n int, err error) {
 
 func TestCreateTrackMaps(t *testing.T) {
 	mapStore := CreateTrackMapStore()
-	mapStore.tracks = map[string]*trackInfo{}
+	mapStore.tracks = map[string][]*trackInfo{}
 	//mapStore.targetDriver = 44
 
 	//f1gopherlib.SetLogOutput(blah{t: t})
@@ -32,7 +32,14 @@ func TestCreateTrackMaps(t *testing.T) {
 
 	for _, session := range history {
 
-		if session.Type != Messages.Practice1Session {
+		// Sessions before 2020 don't have SessionData files so we have no segment info to work out car locations
+		if session.EventTime.Year() < 2020 {
+			continue
+		}
+		// We only need one session type
+		if session.Type != Messages.Practice1Session &&
+			session.Type != Messages.Practice2Session &&
+			session.Type != Messages.Practice3Session {
 			continue
 		}
 
@@ -46,22 +53,23 @@ func TestCreateTrackMaps(t *testing.T) {
 			continue
 		}
 
-		mapStore.SelectTrack(data.Track(), session.EventTime.Year())
+		mapStore.SelectTrack(data.Track(), session.TrackYearCreated)
 
 		exists, _, _, _ := mapStore.MapAvailable(100, 100)
 		if exists {
+			data.Close()
 			continue
 		}
 
-		ticker := time.NewTicker(360 * time.Second)
+		ticker := time.NewTicker(30 * time.Second)
 
-		t.Logf("%v - Processing track: %s %s...", time.Now().Format("15:04:05"), data.Track(), data.Session().String())
+		t.Logf("Processing track: using data for %d for session %d %s %s...", session.EventTime.Year(), session.TrackYearCreated, data.Track(), data.Session().String())
 
 		exit := false
 		for !exit {
 			select {
 			case <-ticker.C:
-				t.Logf("%v - Timeout for track: %s", time.Now().Format("15:04:05"), data.Track())
+				t.Log("\tTimeout for track")
 				exit = true
 
 			case msg := <-data.Location():
@@ -73,13 +81,15 @@ func TestCreateTrackMaps(t *testing.T) {
 
 			if mapStore.trackReady && mapStore.pitlaneReady {
 				ticker.Stop()
-				t.Logf("%v - Finished track: %s", time.Now().Format("15:04:05"), data.Track())
+				t.Log("\tFinished track")
 				break
 			}
 		}
 
-		mapStore.writeToFile("./trackMapData2.go")
+		data.Close()
 	}
+
+	mapStore.writeToFile("./trackMapData2.go")
 
 	t.Log("Done")
 }

@@ -44,7 +44,7 @@ func (t *trackMap) Init(dataSrc f1gopherlib.F1GopherLib) {
 	t.driverColors = map[int]color.Color{}
 	t.driverNames = map[int]string{}
 
-	t.mapStore.SelectTrack(dataSrc.Track(), dataSrc.SessionStart().Year())
+	t.mapStore.SelectTrack(dataSrc.Track(), dataSrc.TrackYear())
 }
 
 func (t *trackMap) ProcessLocation(data Messages.Location) {

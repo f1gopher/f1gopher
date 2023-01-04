@@ -26,7 +26,7 @@ type trackInfo struct {
 }
 
 type trackMapStore struct {
-	tracks map[string]*trackInfo
+	tracks map[string][]*trackInfo
 
 	currentTrack *trackInfo
 
@@ -45,7 +45,7 @@ type trackMapStore struct {
 
 func CreateTrackMapStore() *trackMapStore {
 	store := &trackMapStore{
-		tracks:       make(map[string]*trackInfo),
+		tracks:       make(map[string][]*trackInfo),
 		currentTrack: nil,
 		trackReady:   false,
 		pitlaneReady: false,
@@ -53,20 +53,26 @@ func CreateTrackMapStore() *trackMapStore {
 
 	// Load known tracks
 	for x := range trackMapData {
-		store.tracks[trackMapData[x].name] = &trackMapData[x]
+		store.storeMap(&trackMapData[x])
 	}
 
 	return store
 }
 
 func (t *trackMapStore) SelectTrack(name string, year int) {
-	track, exists := t.tracks[name]
+	trackVersions, exists := t.tracks[name]
 	if exists {
-		t.currentTrack = track
-		t.trackReady = true
-		t.pitlaneReady = true
-		t.targetDriver = 0
-		return
+		for x := range trackVersions {
+			if year == trackVersions[x].yearCreated {
+				t.currentTrack = trackVersions[x]
+				t.trackReady = true
+				t.pitlaneReady = true
+				t.targetDriver = 0
+				return
+			}
+		}
+
+		// No track for the year we need
 	}
 
 	t.currentTrack = &trackInfo{
@@ -210,13 +216,17 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 			!t.trackEnd.IsZero() {
 
 			t.trackReady = true
+			alternate := true
 
 			for _, location := range t.locations {
 				if location.Timestamp.Before(t.trackStart) {
 					continue
 				}
 
-				t.currentTrack.outline = append(t.currentTrack.outline, image.Pt(int(location.X), int(location.Y)))
+				if alternate {
+					t.currentTrack.outline = append(t.currentTrack.outline, image.Pt(int(location.X), int(location.Y)))
+				}
+				alternate = !alternate
 
 				if location.Timestamp.After(t.trackEnd) {
 					break
@@ -245,9 +255,6 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 					t.currentTrack.maxY = t.currentTrack.outline[x].Y
 				}
 			}
-
-			// Store track for later use
-			t.tracks[t.currentTrack.name] = t.currentTrack
 		}
 
 		if !t.pitlaneReady &&
@@ -255,6 +262,7 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 			!t.pitlaneEnd.IsZero() {
 
 			t.pitlaneReady = true
+			alternate := true
 
 			// Count back
 			actualPitStart := t.pitlaneStart.Add(-7 * time.Second)
@@ -264,16 +272,30 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 					continue
 				}
 
-				t.currentTrack.pitlane = append(t.currentTrack.pitlane, image.Pt(int(location.X), int(location.Y)))
+				if alternate {
+					t.currentTrack.pitlane = append(t.currentTrack.pitlane, image.Pt(int(location.X), int(location.Y)))
+				}
+				alternate = !alternate
 
 				if location.Timestamp.After(t.pitlaneEnd) {
 					break
 				}
 			}
-
-			// Store track for later use
-			t.tracks[t.currentTrack.name] = t.currentTrack
 		}
+
+		if t.trackReady && t.pitlaneReady {
+			// Store track for later use
+			t.storeMap(t.currentTrack)
+		}
+	}
+}
+
+func (t *trackMapStore) storeMap(trackMap *trackInfo) {
+	_, exists := t.tracks[trackMap.name]
+	if exists {
+		t.tracks[trackMap.name] = append(t.tracks[trackMap.name], trackMap)
+	} else {
+		t.tracks[trackMap.name] = []*trackInfo{trackMap}
 	}
 }
 
@@ -291,24 +313,26 @@ var trackMapData = []trackInfo{
 `)
 
 	for x := range t.tracks {
-		f.WriteString("\t{\n")
-		f.WriteString(fmt.Sprintf("\t\tname: \"%s\",\n", t.tracks[x].name))
-		f.WriteString(fmt.Sprintf("\t\tyearCreated: \"%d\",\n", t.tracks[x].yearCreated))
-		f.WriteString("\t\toutline: []image.Point{\n")
-		for _, p := range t.tracks[x].outline {
-			f.WriteString(fmt.Sprintf("\t\t\timage.Pt(%d, %d),\n", p.X, p.Y))
+		for _, track := range t.tracks[x] {
+			f.WriteString("\t{\n")
+			f.WriteString(fmt.Sprintf("\t\tname: \"%s\",\n", track.name))
+			f.WriteString(fmt.Sprintf("\t\tyearCreated: %d,\n", track.yearCreated))
+			f.WriteString("\t\toutline: []image.Point{\n")
+			for _, p := range track.outline {
+				f.WriteString(fmt.Sprintf("\t\t\timage.Pt(%d, %d),\n", p.X, p.Y))
+			}
+			f.WriteString("\t\t},\n")
+			f.WriteString("\t\tpitlane: []image.Point{\n")
+			for _, p := range track.pitlane {
+				f.WriteString(fmt.Sprintf("\t\t\timage.Pt(%d, %d),\n", p.X, p.Y))
+			}
+			f.WriteString("\t\t},\n")
+			f.WriteString(fmt.Sprintf("\t\tminX: %d,\n", track.minX))
+			f.WriteString(fmt.Sprintf("\t\tmaxX: %d,\n", track.maxX))
+			f.WriteString(fmt.Sprintf("\t\tminY: %d,\n", track.minY))
+			f.WriteString(fmt.Sprintf("\t\tmaxY: %d,\n", track.maxY))
+			f.WriteString("\t},\n")
 		}
-		f.WriteString("\t\t},\n")
-		f.WriteString("\t\tpitlane: []image.Point{\n")
-		for _, p := range t.tracks[x].pitlane {
-			f.WriteString(fmt.Sprintf("\t\t\timage.Pt(%d, %d),\n", p.X, p.Y))
-		}
-		f.WriteString("\t\t},\n")
-		f.WriteString(fmt.Sprintf("\t\tminX: %d,\n", t.tracks[x].minX))
-		f.WriteString(fmt.Sprintf("\t\tmaxX: %d,\n", t.tracks[x].maxX))
-		f.WriteString(fmt.Sprintf("\t\tminY: %d,\n", t.tracks[x].minY))
-		f.WriteString(fmt.Sprintf("\t\tmaxY: %d,\n", t.tracks[x].maxY))
-		f.WriteString("\t},\n")
 	}
 
 	f.WriteString("}")

@@ -27,6 +27,7 @@ import (
 type dataView struct {
 	ctxShutdown context.CancelFunc
 	ctx         context.Context
+	closing     bool
 
 	dataSrc f1gopherlib.F1GopherLib
 
@@ -41,6 +42,7 @@ type dataView struct {
 func (d *dataView) init(dataSrc f1gopherlib.F1GopherLib) {
 	d.dataSrc = dataSrc
 	d.ctx, d.ctxShutdown = context.WithCancel(context.Background())
+	d.closing = false
 
 	for x := range d.panels {
 		d.panels[x].Init(dataSrc)
@@ -51,6 +53,9 @@ func (d *dataView) init(dataSrc f1gopherlib.F1GopherLib) {
 }
 
 func (d *dataView) close() {
+	d.closing = true
+	d.dataSrc.Close()
+
 	if d.ctxShutdown != nil {
 		d.ctxShutdown()
 	}
@@ -67,6 +72,10 @@ func (d *dataView) close() {
 }
 
 func (d *dataView) draw(width int, height int) {
+	if d.closing {
+		return
+	}
+
 	var xPos float32 = 0.0
 	var yPos float32 = 0.0
 
@@ -88,6 +97,10 @@ func (d *dataView) draw(width int, height int) {
 			w = giu.Window(title).
 				Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 				Pos(xPos, yPos)
+		}
+
+		if d.closing {
+			return
 		}
 
 		w.Layout(widgets...)
