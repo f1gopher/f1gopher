@@ -1,29 +1,22 @@
 package panel
 
 import (
+	"fmt"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
 	"github.com/f1gopher/f1gopherlib/flowControl"
 	"github.com/f1gopher/f1gopherlib/parser"
+	"golang.org/x/image/colornames"
+	"image/png"
+	"log"
+	"os"
 	"testing"
 	"time"
 )
 
-type blah struct {
-	t *testing.T
-}
-
-func (b blah) Write(p []byte) (n int, err error) {
-	b.t.Logf("%s", string(p))
-	return len(p), nil
-}
-
 func TestCreateTrackMaps(t *testing.T) {
 	mapStore := CreateTrackMapStore()
 	mapStore.tracks = map[string][]*trackInfo{}
-	//mapStore.targetDriver = 44
-
-	//f1gopherlib.SetLogOutput(blah{t: t})
 
 	history := f1gopherlib.RaceHistory()
 	for i, j := 0, len(history)-1; i < j; i, j = i+1, j-1 {
@@ -92,4 +85,28 @@ func TestCreateTrackMaps(t *testing.T) {
 	mapStore.writeToFile("./trackMapData2.go")
 
 	t.Log("Done")
+}
+
+func TestSaveTrackMapsToDisk(t *testing.T) {
+	mapStore := CreateTrackMapStore()
+	mapStore.backgroundColor = colornames.Cadetblue
+
+	os.Mkdir("../../track images", 0755)
+
+	for trackName, tracks := range mapStore.tracks {
+		for _, track := range tracks {
+			mapStore.SelectTrack(trackName, track.yearCreated)
+
+			mapStore.MapAvailable(500, 500)
+
+			f, err := os.Create(fmt.Sprintf("../../track images/%s-%d.png", trackName, track.yearCreated))
+			if err != nil {
+				panic(err)
+			}
+			if err = png.Encode(f, mapStore.gc.GetImage()); err != nil {
+				log.Printf("failed to encode: %v", err)
+			}
+			f.Close()
+		}
+	}
 }

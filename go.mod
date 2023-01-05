@@ -34,6 +34,7 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
 	github.com/sqweek/dialog v0.0.0-20220809060634-e981b270ebbf // indirect
+	github.com/ungerik/go-cairo v0.0.0-20220815093914-e24bd4259cef // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect

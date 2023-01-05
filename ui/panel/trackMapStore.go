@@ -2,10 +2,11 @@ package panel
 
 import (
 	"fmt"
-	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib/Messages"
+	"github.com/ungerik/go-cairo"
 	"golang.org/x/image/colornames"
 	"image"
+	"image/color"
 	"math"
 	"os"
 	"time"
@@ -41,14 +42,23 @@ type trackMapStore struct {
 	pitlaneStart time.Time
 	pitlaneEnd   time.Time
 	prevLocation Messages.CarLocation
+
+	backgroundColor color.RGBA
+	currentWidth    int
+	currentHeight   int
+	gc              *cairo.Surface
 }
 
 func CreateTrackMapStore() *trackMapStore {
 	store := &trackMapStore{
-		tracks:       make(map[string][]*trackInfo),
-		currentTrack: nil,
-		trackReady:   false,
-		pitlaneReady: false,
+		tracks:        make(map[string][]*trackInfo),
+		currentTrack:  nil,
+		trackReady:    false,
+		pitlaneReady:  false,
+		currentWidth:  0,
+		currentHeight: 0,
+		// Transparent background by default
+		backgroundColor: color.RGBA{R: 0, G: 0, B: 0, A: 0},
 	}
 
 	// Load known tracks
@@ -68,6 +78,9 @@ func (t *trackMapStore) SelectTrack(name string, year int) {
 				t.trackReady = true
 				t.pitlaneReady = true
 				t.targetDriver = 0
+				t.currentWidth = 0
+				t.currentHeight = 0
+				t.gc = nil
 				return
 			}
 		}
@@ -83,6 +96,9 @@ func (t *trackMapStore) SelectTrack(name string, year int) {
 	}
 	t.trackReady = false
 	t.pitlaneReady = false
+	t.currentWidth = 0
+	t.currentHeight = 0
+	t.gc = nil
 
 	t.locations = make([]Messages.Location, 0)
 	t.trackStart = time.Time{}
@@ -95,11 +111,17 @@ func (t *trackMapStore) SelectTrack(name string, year int) {
 
 func (t *trackMapStore) MapAvailable(width int, height int) (available bool, scaling float64, xOffset int, yOffset int) {
 	if t.trackReady {
+		// If the width and height haven't changed since the last time we drew the track outline
+		// then don't redraw just return
+		if width == t.currentWidth && height == t.currentHeight {
+			return t.trackReady, t.currentTrack.scaling, t.currentTrack.xOffset, t.currentTrack.yOffset
+		}
+
+		t.currentWidth = width
+		t.currentHeight = height
+
 		xRange := float64(t.currentTrack.maxX - t.currentTrack.minX)
 		yRange := float64(t.currentTrack.maxY - t.currentTrack.minY)
-
-		// TODO - use actual panel size
-		// TODO - handle panel resizing
 
 		// Add 0.5 to round up
 		if xRange > yRange {
@@ -108,44 +130,72 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 			t.currentTrack.scaling = yRange / float64(height)
 		}
 
-		// TODO - this doesn't always seem right. For Abu Dhabi X it wrong but Y is right
 		t.currentTrack.xOffset = width - int((math.Abs(float64(t.currentTrack.minX))/xRange)*float64(width))
 		t.currentTrack.yOffset = int((math.Abs(float64(t.currentTrack.minY)) / yRange) * float64(height))
+
+		t.gc = cairo.NewSurface(cairo.FORMAT_ARGB32, width, height)
+		t.gc.SetSourceRGBA(
+			float64(t.backgroundColor.R)/255.0,
+			float64(t.backgroundColor.G)/255.0,
+			float64(t.backgroundColor.B)/255.0,
+			float64(t.backgroundColor.A)/255.0)
+		t.gc.Rectangle(0, 0, float64(t.gc.GetWidth()), float64(t.gc.GetHeight()))
+		t.gc.Fill()
+
+		// Pitlane
+		color := colornames.Yellow
+		t.gc.SetSourceRGBA(float64(color.R)/255.0, float64(color.G)/255.0, float64(color.B)/255.0, 1.0)
+		t.gc.NewPath()
+		first := true
+
+		for loc := range t.currentTrack.pitlane {
+			xPoint := float64(t.currentTrack.pitlane[loc].X)
+			xPoint = float64(width) - xPoint
+
+			x := (xPoint / t.currentTrack.scaling) + float64(t.currentTrack.xOffset)
+			y := (float64(t.currentTrack.pitlane[loc].Y) / t.currentTrack.scaling) + float64(t.currentTrack.yOffset)
+
+			if first {
+				t.gc.MoveTo(x, y)
+				first = false
+				continue
+			}
+
+			t.gc.LineTo(x, y)
+		}
+		t.gc.Stroke()
+
+		// Track
+		color = colornames.White
+		t.gc.SetSourceRGBA(float64(color.R)/255.0, float64(color.G)/255.0, float64(color.B)/255.0, 1.0)
+		t.gc.NewPath()
+		first = true
+
+		for loc := range t.currentTrack.outline {
+			xPoint := float64(t.currentTrack.outline[loc].X)
+			xPoint = float64(width) - xPoint
+
+			x := (xPoint / t.currentTrack.scaling) + float64(t.currentTrack.xOffset)
+			y := (float64(t.currentTrack.outline[loc].Y) / t.currentTrack.scaling) + float64(t.currentTrack.yOffset)
+
+			if first {
+				t.gc.MoveTo(x, y)
+				first = false
+				continue
+			}
+
+			t.gc.LineTo(x, y)
+		}
+		t.gc.ClosePath()
+		t.gc.Stroke()
+
+		t.gc.Flush()
+		t.gc.Finish()
 
 		return t.trackReady, t.currentTrack.scaling, t.currentTrack.xOffset, t.currentTrack.yOffset
 	}
 
 	return false, 0.0, 0, 0
-}
-
-func (t *trackMapStore) DrawMap(canvas *giu.Canvas, pos image.Point, width int) {
-	if !t.trackReady {
-		panic("No map available to draw")
-	}
-
-	if t.pitlaneReady {
-		canvas.PathClear()
-		for loc := range t.currentTrack.pitlane {
-			xPoint := float64(t.currentTrack.pitlane[loc].X)
-			xPoint = float64(width) - xPoint
-
-			x := (xPoint / t.currentTrack.scaling) + float64(t.currentTrack.xOffset+pos.X)
-			y := (float64(t.currentTrack.pitlane[loc].Y) / t.currentTrack.scaling) + float64(t.currentTrack.yOffset+pos.Y)
-			canvas.PathLineTo(image.Pt(int(x+0.5), int(y+0.5)))
-		}
-		canvas.PathStroke(colornames.White, false, 1)
-	}
-
-	canvas.PathClear()
-	for loc := range t.currentTrack.outline {
-		xPoint := float64(t.currentTrack.outline[loc].X)
-		xPoint = float64(width) - xPoint
-
-		x := (xPoint / t.currentTrack.scaling) + float64(t.currentTrack.xOffset+pos.X)
-		y := (float64(t.currentTrack.outline[loc].Y) / t.currentTrack.scaling) + float64(t.currentTrack.yOffset+pos.Y)
-		canvas.PathLineTo(image.Pt(int(x+0.5), int(y+0.5)))
-	}
-	canvas.PathStroke(colornames.Yellow, true, 1)
 }
 
 func (t *trackMapStore) ProcessLocation(data Messages.Location) {
