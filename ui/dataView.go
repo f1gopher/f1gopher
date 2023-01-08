@@ -153,9 +153,12 @@ func (d *dataView) processData() {
 			}
 
 		case msg := <-d.dataSrc.Location():
-			for x := range d.panels {
-				d.panels[x].ProcessLocation(msg)
-			}
+			// Process in the background to try improve performance
+			go func() {
+				for x := range d.panels {
+					d.panels[x].ProcessLocation(msg)
+				}
+			}()
 		}
 
 		// Data has changed so force a UI redraw
