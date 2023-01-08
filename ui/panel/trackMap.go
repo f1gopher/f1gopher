@@ -49,7 +49,7 @@ func (t *trackMap) Init(dataSrc f1gopherlib.F1GopherLib) {
 	t.driverNames = map[int]string{}
 	t.mapGc = nil
 	t.currentWidth = 0
-	t.currentWidth = 0
+	t.currentHeight = 0
 
 	t.mapStore.SelectTrack(dataSrc.Track(), dataSrc.TrackYear())
 }
@@ -84,12 +84,13 @@ func (t *trackMap) Draw() (title string, widgets []giu.Widget) {
 	}
 	t.driverPositionsLock.Unlock()
 
-	displayWidth := width - 15
-	displayHeight := height - 15
+	// Widget has a margin the image needs to fit in
+	displayWidth := width - 16
+	displayHeight := height - 16
 	available, scaling, xOffset, yOffset := t.mapStore.MapAvailable(displayWidth, displayHeight)
 
 	if available {
-		if displayWidth != t.currentWidth && displayHeight != t.currentHeight {
+		if t.mapGc == nil || displayWidth != t.currentWidth || displayHeight != t.currentHeight {
 			t.mapGc = cairo.NewSurface(cairo.FORMAT_ARGB32, displayWidth, displayHeight)
 			t.mapGc.SelectFontFace("sans-serif", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
 			t.mapGc.SetFontSize(10.0)
@@ -129,8 +130,6 @@ func (t *trackMap) Draw() (title string, widgets []giu.Widget) {
 			t.mapGc.ShowText(t.driverNames[car.DriverNumber])
 			t.mapGc.Stroke()
 		}
-
-		t.mapGc.Finish()
 
 		giu.EnqueueNewTextureFromRgba(t.mapGc.GetImage(), func(texture *giu.Texture) {
 			t.trackTexture = texture

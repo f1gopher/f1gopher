@@ -29,10 +29,8 @@ func TestCreateTrackMaps(t *testing.T) {
 		if session.EventTime.Year() < 2020 {
 			continue
 		}
-		// We only need one session type
-		if session.Type != Messages.Practice1Session &&
-			session.Type != Messages.Practice2Session &&
-			session.Type != Messages.Practice3Session {
+
+		if session.Type != Messages.RaceSession {
 			continue
 		}
 
@@ -54,6 +52,12 @@ func TestCreateTrackMaps(t *testing.T) {
 			continue
 		}
 
+		if session.TrackName == "Marina Bay Street Circuit" {
+			mapStore.targetDriver = 5
+		} else if session.TrackName != "Bahrain International Circuit - Outer Track" {
+			mapStore.targetDriver = 44
+		}
+
 		ticker := time.NewTicker(30 * time.Second)
 
 		t.Logf("Processing track: using data for %d for session %d %s %s...", session.EventTime.Year(), session.TrackYearCreated, data.Track(), data.Session().String())
@@ -62,7 +66,7 @@ func TestCreateTrackMaps(t *testing.T) {
 		for !exit {
 			select {
 			case <-ticker.C:
-				t.Log("\tTimeout for track")
+				t.Logf("\tTimeout for track with driver %d", mapStore.targetDriver)
 				exit = true
 
 			case msg := <-data.Location():
@@ -74,7 +78,19 @@ func TestCreateTrackMaps(t *testing.T) {
 
 			if mapStore.trackReady && mapStore.pitlaneReady {
 				ticker.Stop()
-				t.Log("\tFinished track")
+				t.Logf("\tFinished track using driver %d", mapStore.targetDriver)
+
+				mapStore.MapAvailable(500, 500)
+
+				f, err := os.Create(fmt.Sprintf("../../track images/%s-%d.png", session.TrackName, session.TrackYearCreated))
+				if err != nil {
+					panic(err)
+				}
+				if err = png.Encode(f, mapStore.gc.GetImage()); err != nil {
+					log.Printf("failed to encode: %v", err)
+				}
+				f.Close()
+
 				break
 			}
 		}

@@ -113,7 +113,7 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 	if t.trackReady {
 		// If the width and height haven't changed since the last time we drew the track outline
 		// then don't redraw just return
-		if width == t.currentWidth && height == t.currentHeight {
+		if t.gc != nil && width == t.currentWidth && height == t.currentHeight {
 			return t.trackReady, t.currentTrack.scaling, t.currentTrack.xOffset, t.currentTrack.yOffset
 		}
 
@@ -123,15 +123,24 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 		xRange := float64(t.currentTrack.maxX - t.currentTrack.minX)
 		yRange := float64(t.currentTrack.maxY - t.currentTrack.minY)
 
+		const border = 50
+
 		// Add 0.5 to round up
 		if xRange > yRange {
-			t.currentTrack.scaling = xRange / float64(width)
+			t.currentTrack.scaling = xRange / float64(width-border)
 		} else {
-			t.currentTrack.scaling = yRange / float64(height)
+			t.currentTrack.scaling = yRange / float64(height-border)
 		}
 
-		t.currentTrack.xOffset = width - int((math.Abs(float64(t.currentTrack.minX))/xRange)*float64(width))
-		t.currentTrack.yOffset = int((math.Abs(float64(t.currentTrack.minY)) / yRange) * float64(height))
+		// X
+		mapCentreOffsetX := int(float64(t.currentTrack.maxX) / t.currentTrack.scaling)
+		mapMarginX := int((float64(width) - (xRange / t.currentTrack.scaling)) / 2)
+		t.currentTrack.xOffset = mapCentreOffsetX + mapMarginX
+
+		// Y
+		mapCentreOffsetY := int(float64(t.currentTrack.maxY) / t.currentTrack.scaling)
+		mapMarginY := int((float64(height) - (yRange / t.currentTrack.scaling)) / 2)
+		t.currentTrack.yOffset = height - (mapCentreOffsetY + mapMarginY)
 
 		t.gc = cairo.NewSurface(cairo.FORMAT_ARGB32, width, height)
 		t.gc.SetSourceRGBA(
@@ -190,7 +199,6 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 		t.gc.Stroke()
 
 		t.gc.Flush()
-		t.gc.Finish()
 
 		return t.trackReady, t.currentTrack.scaling, t.currentTrack.xOffset, t.currentTrack.yOffset
 	}
@@ -222,16 +230,17 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 		return
 	}
 
-	if t.targetDriver == 0 {
+	if t.targetDriver == 0 && data.Number != 0 && data.Location == Messages.OutLap {
 		t.targetDriver = data.Number
 	}
 
 	if data.Number == t.targetDriver {
 
-		if t.trackStart.IsZero() && data.Location == Messages.OnTrack {
+		if t.trackStart.IsZero() && data.Location == Messages.OnTrack && data.Lap != 1 &&
+			data.Sector1 != 0 && data.Sector2 != 0 && data.Sector3 != 0 {
+
 			t.trackStart = data.Timestamp
 			t.recordingLap = data.Lap
-			//return
 		}
 
 		// If dive into pits when recording track then abort record track
@@ -240,17 +249,23 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 			t.recordingLap = -1
 		}
 
-		if !t.trackStart.IsZero() && t.trackEnd.IsZero() && data.Lap == t.recordingLap+1 {
+		// If the car stops reset and use another driver
+		if data.Location == Messages.OutOfRace || data.Location == Messages.Stopped {
+			t.targetDriver = 0
+			t.trackStart = time.Time{}
+			t.recordingLap = -1
+		}
+
+		if !t.trackStart.IsZero() && t.trackEnd.IsZero() && data.Lap == t.recordingLap+1 &&
+			data.Sector1 != 0 && data.Sector2 != 0 && data.Sector3 != 0 {
 			t.trackEnd = data.Timestamp
 			t.recordingLap = -1
-			//return
 		}
 
 		if t.pitlaneStart.IsZero() && data.Location == Messages.Pitlane &&
 			(t.prevLocation == Messages.OnTrack || t.prevLocation == Messages.OutLap) {
 
 			t.pitlaneStart = data.Timestamp
-			//return
 		}
 
 		if !t.pitlaneStart.IsZero() && t.pitlaneEnd.IsZero() && data.Location == Messages.OutLap {
@@ -288,8 +303,6 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 			t.currentTrack.minY = math.MaxInt
 			t.currentTrack.maxY = math.MinInt
 
-			// TODO - smooth points
-
 			for x := range t.currentTrack.outline {
 				if t.currentTrack.outline[x].X < t.currentTrack.minX {
 					t.currentTrack.minX = t.currentTrack.outline[x].X
@@ -304,6 +317,14 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 				if t.currentTrack.outline[x].Y > t.currentTrack.maxY {
 					t.currentTrack.maxY = t.currentTrack.outline[x].Y
 				}
+			}
+
+			if len(t.currentTrack.outline) == 0 {
+				t.trackReady = false
+				t.targetDriver = 0
+				t.trackStart = time.Time{}
+				t.trackEnd = time.Time{}
+				t.recordingLap = -1
 			}
 		}
 
