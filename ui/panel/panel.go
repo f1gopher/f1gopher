@@ -6,11 +6,29 @@ import (
 	"github.com/f1gopher/f1gopherlib/Messages"
 )
 
+type Type int
+
+const (
+	Info Type = iota
+	Timing
+	RaceControlMessages
+	TrackMap
+	Weather
+	TeamRadio
+	WebTiming
+)
+
+func (t Type) String() string {
+	return [...]string{"Info", "Timing", "RaceControlMessages", "TrackMap", "Weather", "TeamRadio", "WebTiming"}[t]
+}
+
 type Panel interface {
+	Type() Type
+
 	Init(dataSrc f1gopherlib.F1GopherLib)
 	Close()
 
-	Draw() (title string, widgets []giu.Widget)
+	Draw(width int, height int) []giu.Widget
 
 	ProcessTiming(data Messages.Timing)
 	ProcessEventTime(data Messages.EventTime)

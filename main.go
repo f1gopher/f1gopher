@@ -48,8 +48,8 @@ func main() {
 
 	wnd := giu.NewMasterWindow(
 		fmt.Sprintf("F1Gopher - v%s", version),
-		1024,
-		768,
+		1920,
+		1080,
 		0)
 	uiManager := ui.Create(sugar, wnd, config, *autoLivePtr)
 	wnd.Run(uiManager.Loop)

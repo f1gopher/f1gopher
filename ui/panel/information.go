@@ -32,6 +32,8 @@ func (i *information) ProcessRadio(data Messages.Radio)                         
 func (i *information) ProcessLocation(data Messages.Location)                      {}
 func (i *information) Close()                                                      {}
 
+func (i *information) Type() Type { return Info }
+
 func (i *information) Init(dataSrc f1gopherlib.F1GopherLib) {
 	i.dataSrc = dataSrc
 
@@ -51,7 +53,7 @@ func (i *information) ProcessEvent(data Messages.Event) {
 	i.eventLock.Unlock()
 }
 
-func (i *information) Draw() (title string, widgets []giu.Widget) {
+func (i *information) Draw(width int, height int) []giu.Widget {
 
 	pauseTxt := "Pause"
 	if i.dataSrc.IsPaused() {
@@ -59,10 +61,10 @@ func (i *information) Draw() (title string, widgets []giu.Widget) {
 	}
 
 	panelWidgets := []giu.Widget{
-		i.infoWidgets(),
-
-		// Temporary time skip controls (TODO - need to hide for live view)
 		giu.Row(
+			i.infoWidgets(),
+
+			// Temporary time skip controls (TODO - need to hide for live view)
 			giu.Button("Jump to Start").OnClick(func() {
 				i.dataSrc.SkipToSessionStart()
 			}),
@@ -74,11 +76,10 @@ func (i *information) Draw() (title string, widgets []giu.Widget) {
 			}),
 			giu.Button("Back").OnClick(func() {
 				i.exit()
-			}),
-		),
+			})),
 	}
 
-	return "Information", panelWidgets
+	return panelWidgets
 }
 
 func (i *information) infoWidgets() *giu.RowWidget {

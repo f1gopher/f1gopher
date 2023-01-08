@@ -34,6 +34,8 @@ func (r *raceControlMessages) ProcessRadio(data Messages.Radio)         {}
 func (r *raceControlMessages) ProcessLocation(data Messages.Location)   {}
 func (r *raceControlMessages) Close()                                   {}
 
+func (r *raceControlMessages) Type() Type { return RaceControlMessages }
+
 func (r *raceControlMessages) Init(dataSrc f1gopherlib.F1GopherLib) {
 	r.dataSrc = dataSrc
 
@@ -49,14 +51,14 @@ func (r *raceControlMessages) ProcessRaceControlMessages(data Messages.RaceContr
 	r.dataChanged.Store(true)
 }
 
-func (r *raceControlMessages) Draw() (title string, widgets []giu.Widget) {
+func (r *raceControlMessages) Draw(width int, height int) []giu.Widget {
 
 	if r.dataChanged.CompareAndSwap(true, false) {
 		r.dataChanged.Store(false)
 		r.cachedUI = r.formatMessages()
 	}
 
-	return "Race Control Messages", r.cachedUI
+	return r.cachedUI
 }
 
 func (r *raceControlMessages) formatMessages() []giu.Widget {

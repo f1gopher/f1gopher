@@ -37,6 +37,8 @@ func (t *teamRadio) ProcessRaceControlMessages(data Messages.RaceControlMessage)
 func (t *teamRadio) ProcessWeather(data Messages.Weather)                        {}
 func (t *teamRadio) ProcessLocation(data Messages.Location)                      {}
 
+func (t *teamRadio) Type() Type { return TeamRadio }
+
 func (t *teamRadio) Init(dataSrc f1gopherlib.F1GopherLib) {
 	// Clear previous session data
 	t.radioName = noRadioMessage
@@ -70,8 +72,8 @@ func (t *teamRadio) Close() {
 	t.audioPlayer = nil
 }
 
-func (t *teamRadio) Draw() (title string, widgets []giu.Widget) {
-	return "Team Radio", []giu.Widget{
+func (t *teamRadio) Draw(width int, height int) (widgets []giu.Widget) {
+	return []giu.Widget{
 		giu.Checkbox("Mute Radio", &t.isMuted),
 		giu.Labelf("Playing: %s", t.radioName),
 	}

@@ -44,6 +44,8 @@ func (t *timing) ProcessRadio(data Messages.Radio)                            {}
 func (t *timing) ProcessLocation(data Messages.Location)                      {}
 func (t *timing) Close()                                                      {}
 
+func (t *timing) Type() Type { return Timing }
+
 func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib) {
 	t.gapToInfront = dataSrc.Session() == Messages.RaceSession || dataSrc.Session() == Messages.SprintSession
 
@@ -69,7 +71,7 @@ func (t *timing) ProcessEvent(data Messages.Event) {
 	t.eventLock.Unlock()
 }
 
-func (t *timing) Draw() (title string, widgets []giu.Widget) {
+func (t *timing) Draw(width int, height int) []giu.Widget {
 
 	drivers := t.orderedDrivers()
 
@@ -221,7 +223,7 @@ func (t *timing) Draw() (title string, widgets []giu.Widget) {
 		giu.Label(""),
 	))
 
-	return "Timing", []giu.Widget{table.Rows(rows...)}
+	return []giu.Widget{table.Rows(rows...)}
 }
 
 func (t *timing) updateSessionStats(drivers []Messages.Timing) {

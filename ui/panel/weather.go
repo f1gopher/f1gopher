@@ -37,6 +37,8 @@ func (w *weather) ProcessRadio(data Messages.Radio)                            {
 func (w *weather) ProcessLocation(data Messages.Location)                      {}
 func (w *weather) Close()                                                      {}
 
+func (w *weather) Type() Type { return Weather }
+
 func (w *weather) ProcessWeather(data Messages.Weather) {
 	w.dataLock.Lock()
 	w.data = data
@@ -44,13 +46,13 @@ func (w *weather) ProcessWeather(data Messages.Weather) {
 	w.dataChanged.Store(true)
 }
 
-func (w *weather) Draw() (title string, widgets []giu.Widget) {
+func (w *weather) Draw(width int, height int) []giu.Widget {
 	if w.dataChanged.CompareAndSwap(true, false) {
 		w.dataChanged.Store(false)
 		w.cachedUI = w.widgets()
 	}
 
-	return "Weather", w.cachedUI
+	return w.cachedUI
 }
 
 func (w *weather) widgets() []giu.Widget {

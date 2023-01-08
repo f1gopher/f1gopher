@@ -42,6 +42,8 @@ func (t *trackMap) ProcessRaceControlMessages(data Messages.RaceControlMessage) 
 func (t *trackMap) ProcessWeather(data Messages.Weather)                        {}
 func (t *trackMap) ProcessRadio(data Messages.Radio)                            {}
 
+func (t *trackMap) Type() Type { return TrackMap }
+
 func (t *trackMap) Init(dataSrc f1gopherlib.F1GopherLib) {
 	// Clear previous session data
 	t.driverPositions = map[int]Messages.Location{}
@@ -73,10 +75,7 @@ func (t *trackMap) ProcessTiming(data Messages.Timing) {
 	t.mapStore.ProcessTiming(data)
 }
 
-func (t *trackMap) Draw() (title string, widgets []giu.Widget) {
-	width := 500
-	height := 500
-
+func (t *trackMap) Draw(width int, height int) []giu.Widget {
 	cars := []Messages.Location{}
 	t.driverPositionsLock.Lock()
 	for _, x := range t.driverPositions {
@@ -135,12 +134,12 @@ func (t *trackMap) Draw() (title string, widgets []giu.Widget) {
 			t.trackTexture = texture
 		})
 
-		return "Track Map", []giu.Widget{
+		return []giu.Widget{
 			giu.Image(t.trackTexture).Size(float32(displayWidth), float32(displayHeight)),
 		}
 	}
 
-	return "Track Map", []giu.Widget{
+	return []giu.Widget{
 		giu.Custom(func() {
 			canvas := giu.GetCanvas()
 			pos := giu.GetCursorScreenPos()

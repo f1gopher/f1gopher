@@ -27,18 +27,17 @@ func createReplayView(webView panel.Panel, changeView func(newView screen, info 
 	view := replayView{
 		dataView{
 			changeView: changeView,
-			panels: []panel.Panel{
-				panel.CreateInformation(func() { changeView(MainMenu, nil) }),
-				panel.CreateTiming(),
-				panel.CreateRaceControlMessages(),
-				panel.CreateWeather(),
-				panel.CreateTeamRadio(),
-				panel.CreateTrackMap(),
-			},
+			panels:     map[panel.Type]panel.Panel{},
 		},
 	}
 
-	view.panels = append(view.panels, webView)
+	view.addPanel(panel.CreateInformation(func() { changeView(MainMenu, nil) }))
+	view.addPanel(panel.CreateTiming())
+	view.addPanel(panel.CreateRaceControlMessages())
+	view.addPanel(panel.CreateWeather())
+	view.addPanel(panel.CreateTeamRadio())
+	view.addPanel(panel.CreateTrackMap())
+	view.addPanel(webView)
 
 	return &view
 }

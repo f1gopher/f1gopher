@@ -2,6 +2,7 @@ package webTimingView
 
 import (
 	"context"
+	"f1gopher/ui/panel"
 	"fmt"
 	"github.com/AllenDang/giu"
 	"github.com/charmbracelet/lipgloss"
@@ -76,6 +77,8 @@ func CreateWebTimingView(
 func (w *WebTiming) ProcessRadio(data Messages.Radio)       {}
 func (w *WebTiming) ProcessLocation(data Messages.Location) {}
 func (w *WebTiming) Close()                                 {}
+
+func (w *WebTiming) Type() panel.Type { return panel.WebTiming }
 
 func (w *WebTiming) Start() {
 	// If we are already running do nothing
@@ -167,8 +170,8 @@ func (w *WebTiming) ProcessWeather(data Messages.Weather) {
 	w.weatherLock.Unlock()
 }
 
-func (w *WebTiming) Draw() (title string, widgets []giu.Widget) {
-	return "Web Timing", nil
+func (w *WebTiming) Draw(width int, height int) (widgets []giu.Widget) {
+	return nil
 }
 
 func (w *WebTiming) runWebServer() {
