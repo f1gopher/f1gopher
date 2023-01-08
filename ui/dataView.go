@@ -37,6 +37,7 @@ type dataView struct {
 
 	event     Messages.Event
 	eventLock sync.Mutex
+	closeWg   sync.WaitGroup
 }
 
 func (d *dataView) addPanel(panel panel.Panel) {
@@ -64,6 +65,9 @@ func (d *dataView) close() {
 		d.ctxShutdown()
 	}
 
+	// Wait for drawing to finish
+	d.closeWg.Wait()
+
 	for x := range d.panels {
 		d.panels[x].Close()
 	}
@@ -80,6 +84,9 @@ func (d *dataView) draw(width int, height int) {
 		return
 	}
 
+	d.closeWg.Add(1)
+	defer d.closeWg.Done()
+
 	var gap float32 = 5.0
 	var timingWidth float32 = 1235
 	var timingHeight float32 = 480
@@ -91,7 +98,13 @@ func (d *dataView) draw(width int, height int) {
 		Pos(0, 0)
 	w.Layout(d.panels[panel.Info].Draw(0, 0)...)
 
-	_, panelHeight := w.CurrentSize()
+	infoWidth, panelHeight := w.CurrentSize()
+
+	w = giu.Window(panel.TeamRadio.String()).
+		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+		Pos(infoWidth+gap, 0)
+	w.Layout(d.panels[panel.TeamRadio].Draw(0, 0)...)
+
 	row1StartY := panelHeight + gap
 
 	// ROW 1
@@ -102,15 +115,10 @@ func (d *dataView) draw(width int, height int) {
 		Size(timingWidth, timingHeight)
 	w.Layout(d.panels[panel.Timing].Draw(0, 0)...)
 
-	w = giu.Window(panel.TeamRadio.String()).
-		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
-		Pos(timingWidth+gap, row1StartY)
-	w.Layout(d.panels[panel.TeamRadio].Draw(0, 0)...)
-	_, radioHeight := w.CurrentSize()
-
 	w = giu.Window(panel.Weather.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
-		Pos(timingWidth+gap, row1StartY+gap+radioHeight+gap)
+		Pos(timingWidth+gap, row1StartY).
+		Size(200, timingHeight)
 	w.Layout(d.panels[panel.Weather].Draw(0, 0)...)
 
 	row2StartY := row1StartY + timingHeight + gap
@@ -130,10 +138,21 @@ func (d *dataView) draw(width int, height int) {
 	mapWidth, _ := w.CurrentSize()
 
 	w = giu.Window(panel.RaceControlMessages.String()).
-		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
-		Pos(500+gap, row3StartY).
-		Size(float32(width)-gap-mapWidth, float32(row3Height))
+		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove|giu.WindowFlagsAlwaysHorizontalScrollbar|giu.WindowFlagsAlwaysVerticalScrollbar).
+		Pos(mapWidth+gap, row3StartY).
+		Size(800, float32(row3Height))
 	w.Layout(d.panels[panel.RaceControlMessages].Draw(0, 0)...)
+	rcmWidth, _ := w.CurrentSize()
+
+	// Only used for race or sprint sessions
+	if d.dataSrc.Session() == Messages.RaceSession || d.dataSrc.Session() == Messages.SprintSession {
+		pacePosY := mapWidth + gap + rcmWidth + gap
+		w = giu.Window(panel.RacePosition.String()).
+			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+			Pos(pacePosY, row3StartY).
+			Size(float32(width)-pacePosY, float32(row3Height))
+		w.Layout(d.panels[panel.RacePosition].Draw(width-int(pacePosY), row3Height)...)
+	}
 }
 
 func (d *dataView) processData() {

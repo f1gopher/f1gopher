@@ -16,10 +16,11 @@ const (
 	Weather
 	TeamRadio
 	WebTiming
+	RacePosition
 )
 
 func (t Type) String() string {
-	return [...]string{"Info", "Timing", "RaceControlMessages", "TrackMap", "Weather", "TeamRadio", "WebTiming"}[t]
+	return [...]string{"Info", "Timing", "RaceControlMessages", "TrackMap", "Weather", "TeamRadio", "WebTiming", "RacePosition"}[t]
 }
 
 type Panel interface {

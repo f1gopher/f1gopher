@@ -74,8 +74,10 @@ func (t *teamRadio) Close() {
 
 func (t *teamRadio) Draw(width int, height int) (widgets []giu.Widget) {
 	return []giu.Widget{
-		giu.Checkbox("Mute Radio", &t.isMuted),
-		giu.Labelf("Playing: %s", t.radioName),
+		giu.Row(
+			giu.Checkbox("Mute Radio", &t.isMuted),
+			giu.Labelf("Playing: %s", t.radioName),
+		),
 	}
 }
 

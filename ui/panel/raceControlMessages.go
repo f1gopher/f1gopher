@@ -106,7 +106,7 @@ func (r *raceControlMessages) formatMessages() []giu.Widget {
 					giu.Style().SetStyleFloat(giu.StyleVarItemSpacing, 0).To(
 						giu.Row(
 							giu.Label(fmt.Sprintf("%s - ", r.rcMessages[x].Timestamp.In(r.dataSrc.CircuitTimezone()).
-								Format("02-01-2006 15:04:05"))),
+								Format("15:04:05"))),
 							giu.Style().SetColor(giu.StyleColorText, color).To(giu.Label(prefix)),
 							giu.Label(r.rcMessages[x].Msg))),
 				)
@@ -115,7 +115,7 @@ func (r *raceControlMessages) formatMessages() []giu.Widget {
 					giu.Label(
 						fmt.Sprintf("%s - %s",
 							r.rcMessages[x].Timestamp.In(r.dataSrc.CircuitTimezone()).
-								Format("02-01-2006 15:04:05"), r.rcMessages[x].Msg)))
+								Format("15:04:05"), r.rcMessages[x].Msg)))
 			}
 		}
 	}
