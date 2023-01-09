@@ -11,11 +11,15 @@ import (
 	"sync"
 )
 
+type trackMapInfo struct {
+	color color.RGBA
+	name  string
+}
+
 type trackMap struct {
 	mapStore *trackMapStore
 
-	driverColors        map[int]color.RGBA
-	driverNames         map[int]string
+	driverData          map[int]trackMapInfo
 	driverPositions     map[int]Messages.Location
 	driverPositionsLock sync.Mutex
 
@@ -30,8 +34,8 @@ type trackMap struct {
 func CreateTrackMap() Panel {
 	return &trackMap{
 		mapStore:        CreateTrackMapStore(),
-		driverColors:    map[int]color.RGBA{},
 		driverPositions: map[int]Messages.Location{},
+		driverData:      map[int]trackMapInfo{},
 	}
 }
 
@@ -47,8 +51,7 @@ func (t *trackMap) Type() Type { return TrackMap }
 func (t *trackMap) Init(dataSrc f1gopherlib.F1GopherLib) {
 	// Clear previous session data
 	t.driverPositions = map[int]Messages.Location{}
-	t.driverColors = map[int]color.RGBA{}
-	t.driverNames = map[int]string{}
+	t.driverData = map[int]trackMapInfo{}
 	t.mapGc = nil
 	t.currentWidth = 0
 	t.currentHeight = 0
@@ -66,10 +69,12 @@ func (t *trackMap) ProcessLocation(data Messages.Location) {
 
 func (t *trackMap) ProcessTiming(data Messages.Timing) {
 
-	// TODO - do this properly
-	if len(t.driverColors) < 20 {
-		t.driverColors[data.Number] = data.Color
-		t.driverNames[data.Number] = data.ShortName
+	_, exists := t.driverData[data.Number]
+	if !exists {
+		t.driverData[data.Number] = trackMapInfo{
+			color: data.Color,
+			name:  data.ShortName,
+		}
 	}
 
 	t.mapStore.ProcessTiming(data)
@@ -113,9 +118,12 @@ func (t *trackMap) Draw(width int, height int) []giu.Widget {
 			x += float64(xOffset)
 			y += float64(yOffset)
 
-			driverColor, exists := t.driverColors[car.DriverNumber]
-			if !exists {
-				driverColor = colornames.White
+			driverInfo, exists := t.driverData[car.DriverNumber]
+			driverColor := colornames.White
+			driverName := "UNK"
+			if exists {
+				driverColor = driverInfo.color
+				driverName = driverInfo.name
 			}
 
 			// Draw marker
@@ -126,7 +134,7 @@ func (t *trackMap) Draw(width int, height int) []giu.Widget {
 
 			// Draw driver short name
 			t.mapGc.MoveTo(x+float64(15), y+2.5)
-			t.mapGc.ShowText(t.driverNames[car.DriverNumber])
+			t.mapGc.ShowText(driverName)
 			t.mapGc.Stroke()
 		}
 
