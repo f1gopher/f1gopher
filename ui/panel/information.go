@@ -75,7 +75,9 @@ func (i *information) Draw(width int, height int) []giu.Widget {
 				i.dataSrc.TogglePause()
 			}),
 			giu.Button("Back").OnClick(func() {
-				i.exit()
+				// Do this on another routine so this one can exit and stop drawing releasing the waitgroup that
+				// exit will wait for
+				go func() { i.exit() }()
 			})),
 	}
 
