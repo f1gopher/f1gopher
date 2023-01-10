@@ -18,6 +18,8 @@ func TestCreateTrackMaps(t *testing.T) {
 	mapStore := CreateTrackMapStore()
 	mapStore.tracks = map[string][]*trackInfo{}
 
+	os.Mkdir("../../track images", 0755)
+
 	history := f1gopherlib.RaceHistory()
 	for i, j := 0, len(history)-1; i < j; i, j = i+1, j-1 {
 		history[i], history[j] = history[j], history[i]

@@ -125,11 +125,13 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 
 		const border = 50
 
-		// Add 0.5 to round up
-		if xRange > yRange {
-			t.currentTrack.scaling = xRange / float64(width-border)
+		// Pick the best scaling option to fill the display
+		a := xRange / float64(width-border)
+		b := yRange / float64(height-border)
+		if a > b {
+			t.currentTrack.scaling = a
 		} else {
-			t.currentTrack.scaling = yRange / float64(height-border)
+			t.currentTrack.scaling = b
 		}
 
 		// X
@@ -281,17 +283,16 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 			!t.trackEnd.IsZero() {
 
 			t.trackReady = true
-			alternate := true
 
-			for _, location := range t.locations {
+			for x, location := range t.locations {
 				if location.Timestamp.Before(t.trackStart) {
 					continue
 				}
 
-				if alternate {
+				// Always include the first and last and then every third location
+				if x%3 == 0 || x == 0 || x == len(t.locations)-1 {
 					t.currentTrack.outline = append(t.currentTrack.outline, image.Pt(int(location.X), int(location.Y)))
 				}
-				alternate = !alternate
 
 				if location.Timestamp.After(t.trackEnd) {
 					break
@@ -333,20 +334,19 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 			!t.pitlaneEnd.IsZero() {
 
 			t.pitlaneReady = true
-			alternate := true
 
 			// Count back
 			actualPitStart := t.pitlaneStart.Add(-7 * time.Second)
 
-			for _, location := range t.locations {
+			for x, location := range t.locations {
 				if location.Timestamp.Before(actualPitStart) {
 					continue
 				}
 
-				if alternate {
+				// Always include the first and last and then every third location
+				if x%3 == 0 || x == 0 || x == len(t.locations)-1 {
 					t.currentTrack.pitlane = append(t.currentTrack.pitlane, image.Pt(int(location.X), int(location.Y)))
 				}
-				alternate = !alternate
 
 				if location.Timestamp.After(t.pitlaneEnd) {
 					break

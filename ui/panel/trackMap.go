@@ -27,8 +27,6 @@ type trackMap struct {
 	mapGc         *cairo.Surface
 	currentWidth  int
 	currentHeight int
-
-	widget *giu.ImageWithRgbaWidget
 }
 
 func CreateTrackMap() Panel {
