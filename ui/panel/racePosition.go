@@ -21,9 +21,8 @@ type racePosition struct {
 	orderedData []*info
 	totalLaps   int
 
-	driverPositionsLock sync.Mutex
-
-	lines []giu.PlotWidget
+	linesLock sync.Mutex
+	lines     []giu.PlotWidget
 }
 
 func CreateRacePosition() Panel {
@@ -62,9 +61,6 @@ func (r *racePosition) ProcessTiming(data Messages.Timing) {
 
 	driverInfo, exists := r.driverData[data.Number]
 	if !exists {
-		r.driverPositionsLock.Lock()
-		defer r.driverPositionsLock.Unlock()
-
 		driverInfo = &info{
 			color:     data.Color,
 			number:    data.Number,
@@ -83,7 +79,9 @@ func (r *racePosition) ProcessTiming(data Messages.Timing) {
 			tmpLines = append(tmpLines, giu.PlotLine(r.orderedData[x].name, r.orderedData[x].positions))
 		}
 
+		r.linesLock.Lock()
 		r.lines = tmpLines
+		r.linesLock.Unlock()
 	} else {
 		count := len(driverInfo.positions)
 		if count == data.Lap {
@@ -94,17 +92,20 @@ func (r *racePosition) ProcessTiming(data Messages.Timing) {
 				tmpLines = append(tmpLines, giu.PlotLine(r.orderedData[x].name, r.orderedData[x].positions))
 			}
 
-			r.driverPositionsLock.Lock()
-			defer r.driverPositionsLock.Unlock()
+			r.linesLock.Lock()
 			r.lines = tmpLines
+			r.linesLock.Unlock()
 		}
 	}
 }
 
 func (r *racePosition) Draw(width int, height int) []giu.Widget {
+	r.linesLock.Lock()
+	defer r.linesLock.Unlock()
+
 	return []giu.Widget{
 		giu.Plot("Race Position").Plots(r.lines...).
 			Size(width-16, height-16).
-			AxisLimits(0, float64(r.totalLaps), 0, float64(len(r.driverData)), giu.ConditionAppearing),
+			AxisLimits(0, float64(r.totalLaps), 0, float64(len(r.lines)), giu.ConditionAppearing),
 	}
 }
