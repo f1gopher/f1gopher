@@ -115,11 +115,23 @@ func (d *dataView) draw(width int, height int) {
 		Size(timingWidth, timingHeight)
 	w.Layout(d.panels[panel.Timing].Draw(0, 0)...)
 
+	const weatherWidth = 200
 	w = giu.Window(panel.Weather.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 		Pos(timingWidth+gap, row1StartY).
-		Size(200, timingHeight)
+		Size(weatherWidth, timingHeight)
 	w.Layout(d.panels[panel.Weather].Draw(0, 0)...)
+
+	if d.dataSrc.Session() == Messages.RaceSession || d.dataSrc.Session() == Messages.SprintSession {
+		gapperY := timingWidth + gap + weatherWidth + gap
+		gapperWidth := float32(width) - gapperY
+
+		w = giu.Window(panel.GapperPlot.String()).
+			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+			Pos(gapperY, row1StartY).
+			Size(gapperWidth, timingHeight)
+		w.Layout(d.panels[panel.GapperPlot].Draw(int(gapperWidth), int(timingHeight))...)
+	}
 
 	row2StartY := row1StartY + timingHeight + gap
 	row2Height := (float32(height) - row2StartY) / 2
