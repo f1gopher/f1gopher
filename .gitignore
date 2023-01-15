@@ -17,3 +17,6 @@
 # Downloaded data cache
 .cache/
 /track images/
+/profile*.png
+/*.pprof
+go.work

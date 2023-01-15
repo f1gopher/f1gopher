@@ -19,13 +19,15 @@ import (
 	"f1gopher/ui"
 	"flag"
 	"fmt"
+	"os"
+
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
 	"go.uber.org/zap"
-	"os"
 )
 
 func main() {
+	// defer profile.Start(profile.ProfilePath(".")).Stop()
 
 	autoLivePtr := flag.Bool("autoLive", false, "If a live session is in progress display it on startup")
 	logPtr := flag.Bool("log", false, "Enable logging")
