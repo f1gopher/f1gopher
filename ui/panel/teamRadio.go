@@ -45,12 +45,14 @@ func CreateTeamRadio() Panel {
 	return &teamRadio{}
 }
 
+func (t *teamRadio) ProcessDrivers(data Messages.Drivers)                        {}
 func (t *teamRadio) ProcessTiming(data Messages.Timing)                          {}
 func (t *teamRadio) ProcessEventTime(data Messages.EventTime)                    {}
 func (t *teamRadio) ProcessEvent(data Messages.Event)                            {}
 func (t *teamRadio) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
 func (t *teamRadio) ProcessWeather(data Messages.Weather)                        {}
 func (t *teamRadio) ProcessLocation(data Messages.Location)                      {}
+func (t *teamRadio) ProcessTelemetry(data Messages.Telemetry)                    {}
 
 func (t *teamRadio) Type() Type { return TeamRadio }
 
@@ -98,6 +100,7 @@ func (t *teamRadio) Draw(width int, height int) (widgets []giu.Widget) {
 
 func (t *teamRadio) playTeamRadio() {
 	t.wg.Add(1)
+	defer t.wg.Done()
 
 	// If there was an error creating the audio player then do nothing
 	if t.audioPlayer == nil {
@@ -120,8 +123,6 @@ func (t *teamRadio) playTeamRadio() {
 
 		time.Sleep(time.Second * 1)
 	}
-
-	t.wg.Done()
 }
 
 func (t *teamRadio) play(currentMsg Messages.Radio) bool {

@@ -17,11 +17,12 @@ package panel
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
-	"sync"
-	"time"
 )
 
 type information struct {
@@ -40,11 +41,13 @@ func CreateInformation(exit func()) Panel {
 	}
 }
 
+func (i *information) ProcessDrivers(data Messages.Drivers)                        {}
 func (i *information) ProcessTiming(data Messages.Timing)                          {}
 func (i *information) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
 func (i *information) ProcessWeather(data Messages.Weather)                        {}
 func (i *information) ProcessRadio(data Messages.Radio)                            {}
 func (i *information) ProcessLocation(data Messages.Location)                      {}
+func (i *information) ProcessTelemetry(data Messages.Telemetry)                    {}
 func (i *information) Close()                                                      {}
 
 func (i *information) Type() Type { return Info }
@@ -78,11 +81,6 @@ func (i *information) Draw(width int, height int) []giu.Widget {
 	panelWidgets := []giu.Widget{
 		giu.Row(
 			i.infoWidgets(),
-
-			// Temporary time skip controls (TODO - need to hide for live view)
-			giu.Button("Jump to Start").OnClick(func() {
-				i.dataSrc.SkipToSessionStart()
-			}),
 			giu.Button("Skip Minute").OnClick(func() {
 				i.dataSrc.IncrementTime(time.Minute * 1)
 			}),

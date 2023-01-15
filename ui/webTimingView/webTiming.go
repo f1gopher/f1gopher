@@ -89,9 +89,11 @@ func CreateWebTimingView(
 	return &web
 }
 
-func (w *WebTiming) ProcessRadio(data Messages.Radio)       {}
-func (w *WebTiming) ProcessLocation(data Messages.Location) {}
-func (w *WebTiming) Close()                                 {}
+func (w *WebTiming) ProcessDrivers(data Messages.Drivers)     {}
+func (w *WebTiming) ProcessRadio(data Messages.Radio)         {}
+func (w *WebTiming) ProcessLocation(data Messages.Location)   {}
+func (w *WebTiming) ProcessTelemetry(data Messages.Telemetry) {}
+func (w *WebTiming) Close()                                   {}
 
 func (w *WebTiming) Type() panel.Type { return panel.WebTiming }
 

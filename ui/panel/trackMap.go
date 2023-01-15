@@ -16,14 +16,15 @@
 package panel
 
 import (
+	"image"
+	"image/color"
+	"sync"
+
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
 	"github.com/ungerik/go-cairo"
 	"golang.org/x/image/colornames"
-	"image"
-	"image/color"
-	"sync"
 )
 
 type trackMapInfo struct {
@@ -38,10 +39,12 @@ type trackMap struct {
 	driverPositions     map[int]Messages.Location
 	driverPositionsLock sync.Mutex
 
-	trackTexture  *giu.Texture
-	mapGc         *cairo.Surface
-	currentWidth  int
-	currentHeight int
+	trackTexture       *giu.Texture
+	trackTextureWidth  float32
+	trackTextureHeight float32
+	mapGc              *cairo.Surface
+	currentWidth       int
+	currentHeight      int
 }
 
 func CreateTrackMap() Panel {
@@ -52,12 +55,13 @@ func CreateTrackMap() Panel {
 	}
 }
 
-func (t *trackMap) Close()                                                      {}
 func (t *trackMap) ProcessEventTime(data Messages.EventTime)                    {}
 func (t *trackMap) ProcessEvent(data Messages.Event)                            {}
 func (t *trackMap) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
 func (t *trackMap) ProcessWeather(data Messages.Weather)                        {}
 func (t *trackMap) ProcessRadio(data Messages.Radio)                            {}
+func (t *trackMap) ProcessTelemetry(data Messages.Telemetry)                    {}
+func (t *trackMap) Close()                                                      {}
 
 func (t *trackMap) Type() Type { return TrackMap }
 
@@ -72,6 +76,15 @@ func (t *trackMap) Init(dataSrc f1gopherlib.F1GopherLib) {
 	t.mapStore.SelectTrack(dataSrc.Track(), dataSrc.TrackYear())
 }
 
+func (t *trackMap) ProcessDrivers(data Messages.Drivers) {
+	for x := range data.Drivers {
+		t.driverData[data.Drivers[x].Number] = trackMapInfo{
+			color: data.Drivers[x].Color,
+			name:  data.Drivers[x].ShortName,
+		}
+	}
+}
+
 func (t *trackMap) ProcessLocation(data Messages.Location) {
 	t.driverPositionsLock.Lock()
 	t.driverPositions[data.DriverNumber] = data
@@ -81,15 +94,6 @@ func (t *trackMap) ProcessLocation(data Messages.Location) {
 }
 
 func (t *trackMap) ProcessTiming(data Messages.Timing) {
-
-	_, exists := t.driverData[data.Number]
-	if !exists {
-		t.driverData[data.Number] = trackMapInfo{
-			color: data.Color,
-			name:  data.ShortName,
-		}
-	}
-
 	t.mapStore.ProcessTiming(data)
 }
 
@@ -101,6 +105,27 @@ func (t *trackMap) Draw(width int, height int) []giu.Widget {
 	}
 	t.driverPositionsLock.Unlock()
 
+	t.redraw(width, height, cars)
+
+	if t.trackTexture != nil {
+		return []giu.Widget{
+			giu.Image(t.trackTexture).Size(t.trackTextureWidth, t.trackTextureHeight),
+		}
+	}
+
+	return []giu.Widget{
+		giu.Custom(func() {
+			canvas := giu.GetCanvas()
+			pos := giu.GetCursorScreenPos()
+
+			textWidth, _ := giu.CalcTextSize("Building Map...")
+			offset := int(textWidth / 2)
+			canvas.AddText(pos.Add(image.Pt((width/2)-offset, height/2)), colornames.Yellow, "Building Map...")
+		}),
+	}
+}
+
+func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 	// Widget has a margin the image needs to fit in
 	displayWidth := width - 16
 	displayHeight := height - 16
@@ -113,6 +138,8 @@ func (t *trackMap) Draw(width int, height int) []giu.Widget {
 			t.mapGc.SetFontSize(10.0)
 			t.currentWidth = width
 			t.currentHeight = height
+			t.trackTextureWidth = float32(displayWidth)
+			t.trackTextureHeight = float32(displayHeight)
 		}
 
 		// Overwrite the previous data with a clean track outline
@@ -154,20 +181,5 @@ func (t *trackMap) Draw(width int, height int) []giu.Widget {
 		giu.EnqueueNewTextureFromRgba(t.mapGc.GetImage(), func(texture *giu.Texture) {
 			t.trackTexture = texture
 		})
-
-		return []giu.Widget{
-			giu.Image(t.trackTexture).Size(float32(displayWidth), float32(displayHeight)),
-		}
-	}
-
-	return []giu.Widget{
-		giu.Custom(func() {
-			canvas := giu.GetCanvas()
-			pos := giu.GetCursorScreenPos()
-
-			textWidth, _ := giu.CalcTextSize("Building Map...")
-			offset := int(textWidth / 2)
-			canvas.AddText(pos.Add(image.Pt((width/2)-offset, height/2)), colornames.Yellow, "Building Map...")
-		}),
 	}
 }

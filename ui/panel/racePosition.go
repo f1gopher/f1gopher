@@ -49,12 +49,13 @@ func CreateRacePosition() Panel {
 	}
 }
 
-func (r *racePosition) Close()                                                      {}
 func (r *racePosition) ProcessEventTime(data Messages.EventTime)                    {}
 func (r *racePosition) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
 func (r *racePosition) ProcessWeather(data Messages.Weather)                        {}
 func (r *racePosition) ProcessRadio(data Messages.Radio)                            {}
 func (r *racePosition) ProcessLocation(data Messages.Location)                      {}
+func (r *racePosition) ProcessTelemetry(data Messages.Telemetry)                    {}
+func (r *racePosition) Close()                                                      {}
 
 func (r *racePosition) Type() Type { return RacePosition }
 
@@ -66,6 +67,33 @@ func (r *racePosition) Init(dataSrc f1gopherlib.F1GopherLib) {
 	r.totalLaps = 0
 }
 
+func (r *racePosition) ProcessDrivers(data Messages.Drivers) {
+	for x := range data.Drivers {
+		driverInfo := &info{
+			color:     data.Drivers[x].Color,
+			number:    data.Drivers[x].Number,
+			name:      data.Drivers[x].ShortName,
+			positions: []float64{float64(data.Drivers[x].StartPosition)},
+		}
+
+		r.driverData[data.Drivers[x].Number] = driverInfo
+		r.orderedData = append(r.orderedData, driverInfo)
+	}
+
+	sort.Slice(r.orderedData, func(i, j int) bool {
+		return r.orderedData[i].positions[0] < r.orderedData[j].positions[0]
+	})
+
+	tmpLines := []giu.PlotWidget{}
+	for x := range r.orderedData {
+		tmpLines = append(tmpLines, giu.PlotLine(r.orderedData[x].name, r.orderedData[x].positions))
+	}
+
+	r.linesLock.Lock()
+	r.lines = tmpLines
+	r.linesLock.Unlock()
+}
+
 func (r *racePosition) ProcessEvent(data Messages.Event) {
 	if r.totalLaps == 0 {
 		r.totalLaps = data.TotalLaps
@@ -73,21 +101,11 @@ func (r *racePosition) ProcessEvent(data Messages.Event) {
 }
 
 func (r *racePosition) ProcessTiming(data Messages.Timing) {
+	driverInfo := r.driverData[data.Number]
 
-	driverInfo, exists := r.driverData[data.Number]
-	if !exists {
-		driverInfo = &info{
-			color:     data.Color,
-			number:    data.Number,
-			name:      data.ShortName,
-			positions: []float64{float64(data.Position)},
-		}
-
-		r.driverData[data.Number] = driverInfo
-		r.orderedData = append(r.orderedData, driverInfo)
-		sort.Slice(r.orderedData, func(i, j int) bool {
-			return r.orderedData[i].positions[0] < r.orderedData[j].positions[0]
-		})
+	count := len(driverInfo.positions)
+	if count == data.Lap {
+		driverInfo.positions = append(driverInfo.positions, float64(data.Position))
 
 		tmpLines := []giu.PlotWidget{}
 		for x := range r.orderedData {
@@ -97,20 +115,6 @@ func (r *racePosition) ProcessTiming(data Messages.Timing) {
 		r.linesLock.Lock()
 		r.lines = tmpLines
 		r.linesLock.Unlock()
-	} else {
-		count := len(driverInfo.positions)
-		if count == data.Lap {
-			driverInfo.positions = append(driverInfo.positions, float64(data.Position))
-
-			tmpLines := []giu.PlotWidget{}
-			for x := range r.orderedData {
-				tmpLines = append(tmpLines, giu.PlotLine(r.orderedData[x].name, r.orderedData[x].positions))
-			}
-
-			r.linesLock.Lock()
-			r.lines = tmpLines
-			r.linesLock.Unlock()
-		}
 	}
 }
 

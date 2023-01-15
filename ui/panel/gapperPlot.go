@@ -36,7 +36,6 @@ type gapperPlotInfo struct {
 
 type gapperPlot struct {
 	driverData           map[int]*gapperPlotInfo
-	driverDataLock       sync.Mutex
 	totalLaps            int
 	driverNames          []string
 	selectedDriver       int32
@@ -56,12 +55,13 @@ func CreateGapperPlot() Panel {
 	}
 }
 
-func (g *gapperPlot) Close()                                                      {}
 func (g *gapperPlot) ProcessEventTime(data Messages.EventTime)                    {}
 func (g *gapperPlot) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
 func (g *gapperPlot) ProcessWeather(data Messages.Weather)                        {}
 func (g *gapperPlot) ProcessRadio(data Messages.Radio)                            {}
 func (g *gapperPlot) ProcessLocation(data Messages.Location)                      {}
+func (g *gapperPlot) ProcessTelemetry(data Messages.Telemetry)                    {}
+func (g *gapperPlot) Close()                                                      {}
 
 func (g *gapperPlot) Type() Type { return GapperPlot }
 
@@ -73,6 +73,20 @@ func (g *gapperPlot) Init(dataSrc f1gopherlib.F1GopherLib) {
 	g.selectedDriverNumber = -1
 	g.yMin = 0.0
 	g.yMax = 0.0
+}
+
+func (g *gapperPlot) ProcessDrivers(data Messages.Drivers) {
+	for x := range data.Drivers {
+		g.driverData[data.Drivers[x].Number] = &gapperPlotInfo{
+			color:    data.Drivers[x].Color,
+			name:     data.Drivers[x].ShortName,
+			lapTimes: []float64{},
+			fastest:  math.MaxFloat64,
+		}
+
+		g.driverNames = append(g.driverNames, data.Drivers[x].ShortName)
+		sort.Strings(g.driverNames)
+	}
 }
 
 func (g *gapperPlot) ProcessEvent(data Messages.Event) {
@@ -88,22 +102,7 @@ func (g *gapperPlot) ProcessTiming(data Messages.Timing) {
 		return
 	}
 
-	g.driverDataLock.Lock()
-	defer g.driverDataLock.Unlock()
-
-	driverInfo, exists := g.driverData[data.Number]
-	if !exists {
-		g.driverData[data.Number] = &gapperPlotInfo{
-			color:    data.Color,
-			name:     data.ShortName,
-			lapTimes: []float64{},
-			fastest:  math.MaxFloat64,
-		}
-
-		g.driverNames = append(g.driverNames, data.ShortName)
-		sort.Strings(g.driverNames)
-		return
-	}
+	driverInfo := g.driverData[data.Number]
 
 	// We don't get a lap time for the first lap
 	if data.Lap == len(driverInfo.lapTimes)+2 {

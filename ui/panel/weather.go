@@ -44,12 +44,14 @@ func (w *weather) Init(dataSrc f1gopherlib.F1GopherLib) {
 	w.data = Messages.Weather{}
 }
 
+func (w *weather) ProcessDrivers(data Messages.Drivers)                        {}
 func (w *weather) ProcessTiming(data Messages.Timing)                          {}
 func (w *weather) ProcessEventTime(data Messages.EventTime)                    {}
 func (w *weather) ProcessEvent(data Messages.Event)                            {}
 func (w *weather) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
 func (w *weather) ProcessRadio(data Messages.Radio)                            {}
 func (w *weather) ProcessLocation(data Messages.Location)                      {}
+func (w *weather) ProcessTelemetry(data Messages.Telemetry)                    {}
 func (w *weather) Close()                                                      {}
 
 func (w *weather) Type() Type { return Weather }

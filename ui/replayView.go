@@ -37,6 +37,7 @@ func createReplayView(webView panel.Panel, changeView func(newView screen, info 
 	view.addPanel(panel.CreateWeather())
 	view.addPanel(panel.CreateTeamRadio())
 	view.addPanel(panel.CreateTrackMap())
+	view.addPanel(panel.CreateTelemetry())
 
 	// TODO - only create these for race session so that we don't have them processing data even when not displayed
 	view.addPanel(panel.CreateRacePosition())

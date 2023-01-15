@@ -74,7 +74,7 @@ type Manager struct {
 }
 
 const dataSources = parser.EventTime | parser.Timing | parser.Event | parser.RaceControl |
-	parser.TeamRadio | parser.Weather | parser.Location
+	parser.TeamRadio | parser.Weather | parser.Location | parser.Telemetry | parser.Drivers
 
 func Create(logger *zap.SugaredLogger, wnd *giu.MasterWindow, config config, autoLive bool) *Manager {
 	manager := Manager{
@@ -210,7 +210,7 @@ func (u *Manager) changeView(newView screen, info any) {
 			*u.currentSession,
 			u.config.sessionCache(),
 			flowControl.Realtime)
-		
+
 		if err != nil {
 			u.logger.Errorln("Starting replay session", err)
 			return

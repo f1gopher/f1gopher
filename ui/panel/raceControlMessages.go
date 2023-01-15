@@ -41,12 +41,14 @@ func CreateRaceControlMessages() Panel {
 	}
 }
 
+func (r *raceControlMessages) ProcessDrivers(data Messages.Drivers)     {}
 func (r *raceControlMessages) ProcessTiming(data Messages.Timing)       {}
 func (r *raceControlMessages) ProcessEventTime(data Messages.EventTime) {}
 func (r *raceControlMessages) ProcessEvent(data Messages.Event)         {}
 func (r *raceControlMessages) ProcessWeather(data Messages.Weather)     {}
 func (r *raceControlMessages) ProcessRadio(data Messages.Radio)         {}
 func (r *raceControlMessages) ProcessLocation(data Messages.Location)   {}
+func (r *raceControlMessages) ProcessTelemetry(data Messages.Telemetry) {}
 func (r *raceControlMessages) Close()                                   {}
 
 func (r *raceControlMessages) Type() Type { return RaceControlMessages }

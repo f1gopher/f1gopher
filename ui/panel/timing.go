@@ -52,11 +52,13 @@ func CreateTiming() Panel {
 	}
 }
 
+func (t *timing) ProcessDrivers(data Messages.Drivers)                        {}
 func (t *timing) ProcessEventTime(data Messages.EventTime)                    {}
 func (t *timing) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
 func (t *timing) ProcessWeather(data Messages.Weather)                        {}
 func (t *timing) ProcessRadio(data Messages.Radio)                            {}
 func (t *timing) ProcessLocation(data Messages.Location)                      {}
+func (t *timing) ProcessTelemetry(data Messages.Telemetry)                    {}
 func (t *timing) Close()                                                      {}
 
 func (t *timing) Type() Type { return Timing }

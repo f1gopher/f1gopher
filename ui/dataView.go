@@ -137,6 +137,10 @@ func (d *dataView) draw(width int, height int) {
 	row2Height := (float32(height) - row2StartY) / 2
 
 	// ROW 2
+	w = giu.Window(panel.Telemetry.String()).
+		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+		Pos(0, row2StartY)
+	w.Layout(d.panels[panel.Telemetry].Draw(width, int(row2Height))...)
 
 	row3StartY := row2StartY + row2Height + gap
 	row3Height := height - int(row3StartY)
@@ -174,7 +178,17 @@ func (d *dataView) processData() {
 		case <-d.ctx.Done():
 			return
 
+		case msg := <-d.dataSrc.Drivers():
+			for x := range d.panels {
+				d.panels[x].ProcessDrivers(msg)
+			}
+
 		case msg := <-d.dataSrc.Timing():
+			// TODO - sometimes get empty records on shutdown so filter these out
+			if msg.Position == 0 {
+				continue
+			}
+
 			for x := range d.panels {
 				d.panels[x].ProcessTiming(msg)
 			}
@@ -209,12 +223,14 @@ func (d *dataView) processData() {
 			}
 
 		case msg := <-d.dataSrc.Location():
-			// Process in the background to try improve performance
-			go func() {
-				for x := range d.panels {
-					d.panels[x].ProcessLocation(msg)
-				}
-			}()
+			for x := range d.panels {
+				d.panels[x].ProcessLocation(msg)
+			}
+
+		case msg := <-d.dataSrc.Telemetry():
+			for x := range d.panels {
+				d.panels[x].ProcessTelemetry(msg)
+			}
 		}
 
 		// Data has changed so force a UI redraw

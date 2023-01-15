@@ -33,10 +33,21 @@ const (
 	WebTiming
 	RacePosition
 	GapperPlot
+	Telemetry
 )
 
 func (t Type) String() string {
-	return [...]string{"Info", "Timing", "RaceControlMessages", "TrackMap", "Weather", "TeamRadio", "WebTiming", "RacePosition", "GapperPlot"}[t]
+	return [...]string{
+		"Info",
+		"Timing",
+		"RaceControlMessages",
+		"TrackMap",
+		"Weather",
+		"TeamRadio",
+		"WebTiming",
+		"RacePosition",
+		"GapperPlot",
+		"Telemetry"}[t]
 }
 
 type Panel interface {
@@ -47,6 +58,7 @@ type Panel interface {
 
 	Draw(width int, height int) []giu.Widget
 
+	ProcessDrivers(data Messages.Drivers)
 	ProcessTiming(data Messages.Timing)
 	ProcessEventTime(data Messages.EventTime)
 	ProcessEvent(data Messages.Event)
@@ -54,4 +66,5 @@ type Panel interface {
 	ProcessWeather(data Messages.Weather)
 	ProcessRadio(data Messages.Radio)
 	ProcessLocation(data Messages.Location)
+	ProcessTelemetry(data Messages.Telemetry)
 }
