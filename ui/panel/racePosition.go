@@ -70,6 +70,7 @@ func (r *racePosition) Init(dataSrc f1gopherlib.F1GopherLib) {
 	r.driverData = map[int]*info{}
 	r.orderedData = []*info{}
 	r.totalLaps = 0
+	r.plot.reset()
 }
 
 func (r *racePosition) ProcessDrivers(data Messages.Drivers) {

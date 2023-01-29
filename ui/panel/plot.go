@@ -47,6 +47,27 @@ func createPlot(drawBackground func(*cairo.Surface), drawForeground func(*cairo.
 	}
 }
 
+func (p *plot) reset() {
+	p.refreshBackground()
+
+	if p.foregroundGc != nil {
+		// Clear the displayed image
+		p.foregroundGc.SetSourceRGB(0.0, 0.0, 0.0)
+		p.foregroundGc.Rectangle(0, 0, float64(p.currentWidth), float64(p.currentHeight))
+		p.foregroundGc.Fill()
+		p.foregroundGc.Stroke()
+		p.foregroundGc.Flush()
+
+		img := p.foregroundGc.GetImage()
+		giu.EnqueueNewTextureFromRgba(img, func(texture *giu.Texture) {
+			p.plotTexture = texture
+		})
+
+		// Update image widget
+		p.widget = giu.Image(p.plotTexture).Size(p.plotTextureWidth, p.plotTextureHeight)
+	}
+}
+
 func (p *plot) draw(width int, height int) *giu.ImageWidget {
 
 	p.redraw(width, height)

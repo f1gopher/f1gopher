@@ -16,13 +16,15 @@
 package panel
 
 import (
+	"fmt"
 	"github.com/AllenDang/giu"
+	"github.com/AllenDang/imgui-go"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
+	"github.com/ungerik/go-cairo"
 	"image/color"
 	"math"
 	"sort"
-	"sync"
 )
 
 type gapperPlotInfo struct {
@@ -32,6 +34,7 @@ type gapperPlotInfo struct {
 	average  float64
 	total    float64
 	fastest  float64
+	visible  bool
 }
 
 type gapperPlot struct {
@@ -43,16 +46,30 @@ type gapperPlot struct {
 	yMin                 float64
 	yMax                 float64
 
-	linesLock sync.Mutex
-	lines     []giu.PlotWidget
+	visibleDriversSelect *gapperDriverDisplaySelectWidget
+
+	plot            *plot
+	yAxisPos        float64
+	firstDriverY    float64
+	xGap            float64
+	yGap            float64
+	endXPos         float64
+	yAxisPosForZero float64
 }
 
-func CreateGapperPlot() Panel {
-	return &gapperPlot{
-		driverData: map[int]*gapperPlotInfo{},
+const NothingSelected = -1
 
-		totalLaps: 0,
+func CreateGapperPlot() Panel {
+	panel := &gapperPlot{
+		driverData: map[int]*gapperPlotInfo{},
+		totalLaps:  0,
 	}
+	panel.plot = createPlot(panel.drawBackground, panel.drawForeground)
+	panel.visibleDriversSelect = &gapperDriverDisplaySelectWidget{
+		plot:    panel.plot,
+		drivers: []*gapperPlotInfo{},
+	}
+	return panel
 }
 
 func (g *gapperPlot) ProcessEventTime(data Messages.EventTime)                    {}
@@ -69,29 +86,51 @@ func (g *gapperPlot) Init(dataSrc f1gopherlib.F1GopherLib) {
 	g.driverData = map[int]*gapperPlotInfo{}
 	g.totalLaps = 0
 	g.driverNames = []string{}
-	g.selectedDriver = -1
-	g.selectedDriverNumber = -1
-	g.yMin = 0.0
-	g.yMax = 0.0
+	g.selectedDriver = NothingSelected
+	g.selectedDriverNumber = NothingSelected
+	g.yMin = math.MaxFloat64
+	g.yMax = -math.MaxFloat64
+	g.visibleDriversSelect.drivers = []*gapperPlotInfo{}
+	g.visibleDriversSelect.visibleCount = 0
+	g.plot.reset()
 }
 
 func (g *gapperPlot) ProcessDrivers(data Messages.Drivers) {
 	for x := range data.Drivers {
-		g.driverData[data.Drivers[x].Number] = &gapperPlotInfo{
+		driver := &gapperPlotInfo{
 			color:    data.Drivers[x].Color,
 			name:     data.Drivers[x].ShortName,
 			lapTimes: []float64{},
 			fastest:  math.MaxFloat64,
+			visible:  true,
 		}
+		g.driverData[data.Drivers[x].Number] = driver
+		g.visibleDriversSelect.drivers = append(g.visibleDriversSelect.drivers, driver)
 
 		g.driverNames = append(g.driverNames, data.Drivers[x].ShortName)
-		sort.Strings(g.driverNames)
 	}
+
+	sort.Strings(g.driverNames)
+
+	// After loading the drivers auto select the first driver in the list as a default
+	g.selectedDriver = 0
+	for num, driver := range g.driverData {
+		if driver.name == g.driverNames[g.selectedDriver] {
+			g.selectedDriverNumber = num
+			break
+		}
+	}
+
+	sort.Slice(g.visibleDriversSelect.drivers, func(i, j int) bool {
+		return g.visibleDriversSelect.drivers[i].name < g.visibleDriversSelect.drivers[j].name
+	})
+	g.visibleDriversSelect.visibleCount = len(g.visibleDriversSelect.drivers)
 }
 
 func (g *gapperPlot) ProcessEvent(data Messages.Event) {
 	if g.totalLaps == 0 {
 		g.totalLaps = data.TotalLaps
+		g.plot.refreshBackground()
 	}
 }
 
@@ -113,69 +152,225 @@ func (g *gapperPlot) ProcessTiming(data Messages.Timing) {
 		driverInfo.average = driverInfo.total / float64(len(driverInfo.lapTimes))
 		driverInfo.fastest = math.Min(driverInfo.fastest, lapTimeSeconds)
 
-		g.redraw()
+		refreshBackground := false
+		if g.selectedDriverNumber != NothingSelected && driverInfo.visible {
+			// Update the yMin and yMax values for the whole chart
+			baseline := g.driverData[g.selectedDriverNumber].fastest
+
+			// If we don't have a fastest time yet then skip
+			if baseline < math.MaxFloat64 {
+				value := lapTimeSeconds - baseline
+
+				if value < g.yMin {
+					g.yMin = value
+					refreshBackground = true
+				}
+
+				if value > g.yMax {
+					g.yMax = value
+					refreshBackground = true
+				}
+			}
+
+			// If this is the selected driver and the first lap time for that driver then update
+			// the Y min and max values for all other drivers who have data already
+			if g.selectedDriverNumber == data.Number && len(driverInfo.lapTimes) == 1 {
+				refreshBackground = g.refreshYMinMax() || refreshBackground
+			}
+		}
+
+		// Background refresh will cause a foreground refresh so don't need both
+		if refreshBackground {
+			g.plot.refreshBackground()
+		} else if driverInfo.visible {
+			g.plot.refreshForeground()
+		}
 	}
 }
 
-func (g *gapperPlot) Draw(width int, height int) []giu.Widget {
-	g.linesLock.Lock()
-	defer g.linesLock.Unlock()
+func (g *gapperPlot) refreshYMinMax() bool {
+	refreshBackground := false
 
+	baseline := g.driverData[g.selectedDriverNumber].fastest
+
+	// If we don't have a fastest time yet then skip
+	if baseline < math.MaxFloat64 {
+		return refreshBackground
+	}
+
+	g.yMin = math.MaxFloat64
+	g.yMax = -math.MaxFloat64
+
+	for key := range g.driverData {
+		if !g.driverData[key].visible {
+			continue
+		}
+
+		for _, time := range g.driverData[key].lapTimes {
+			value := time - baseline
+			if value < g.yMin {
+				// Pad the value by 1
+				g.yMin = value - 1
+				refreshBackground = true
+			}
+
+			if value > g.yMax {
+				// Pad the value by 1
+				g.yMax = value + 1
+				refreshBackground = true
+			}
+		}
+	}
+	return refreshBackground
+}
+
+func (g *gapperPlot) Draw(width int, height int) []giu.Widget {
 	driverName := "<none>"
-	if g.selectedDriver != -1 {
+	if g.selectedDriver != NothingSelected {
 		driverName = g.driverNames[g.selectedDriver]
 	}
 
 	return []giu.Widget{
-		giu.Combo("Driver", driverName, g.driverNames, &g.selectedDriver).OnChange(func() {
-			for num, driver := range g.driverData {
-				if driver.name == g.driverNames[g.selectedDriver] {
-					g.selectedDriverNumber = num
-					break
+		giu.Row(
+			giu.Combo("Driver", driverName, g.driverNames, &g.selectedDriver).OnChange(func() {
+				for num, driver := range g.driverData {
+					if driver.name == g.driverNames[g.selectedDriver] {
+						g.selectedDriverNumber = num
+						if g.refreshYMinMax() {
+							g.plot.refreshBackground()
+						}
+						break
+					}
 				}
-			}
 
-			// TODO - set flag to be more efficient/responsive
-			g.redraw()
-		}),
-
-		giu.Plot("Gapper Plot").Plots(g.lines...).
-			Size(width-16, height-36).
-			AxisLimits(
-				0,
-				float64(g.totalLaps),
-				g.yMin-1,
-				g.yMax+1,
-				giu.ConditionAppearing),
+				g.plot.refreshForeground()
+			}).Size(100),
+			g.visibleDriversSelect,
+		),
+		g.plot.draw(width-16, height-38),
 	}
 }
 
-func (g *gapperPlot) redraw() {
-	if g.selectedDriverNumber != -1 {
-		baseline := g.driverData[g.selectedDriverNumber].fastest
+func (g *gapperPlot) drawBackground(dc *cairo.Surface) {
+	width := float64(dc.GetWidth())
+	height := float64(dc.GetHeight())
 
-		yMin := math.MaxFloat64
-		yMax := math.SmallestNonzeroFloat64
-		tmpLines := []giu.PlotWidget{}
-		for x := range g.driverData {
-			values := []float64{}
+	// If no driver selected then draw nothing
+	if g.selectedDriver == NothingSelected || math.Abs(g.driverData[g.selectedDriverNumber].fastest-math.MaxFloat64) < math.SmallestNonzeroFloat64 {
+		// Black background
+		dc.SetSourceRGB(0.0, 0.0, 0.0)
+		dc.Rectangle(0, 0, width, height)
+		dc.Fill()
+		dc.Stroke()
 
-			for _, t := range g.driverData[x].lapTimes {
-				val := t - baseline
-				values = append(values, val)
+		dc.SetSourceRGB(1.0, 1.0, 1.0)
+		dc.MoveTo((width/2)-50, height/2)
+		dc.ShowText("Waiting for data...")
+		return
+	}
 
-				yMin = math.Min(yMin, val)
-				yMax = math.Max(yMax, val)
-			}
+	// Leave border all around the chart
+	margin := 10.0
+	// X location for Y axis
+	g.yAxisPos = margin + 30
+	// X pos end of X axis location
+	g.endXPos = width - margin
+	g.xGap = (g.endXPos - g.yAxisPos) / float64(g.totalLaps+1)
+	yAxisLength := height - margin - margin
+	// Gap per 1.0 increment on the y axis
+	g.yGap = yAxisLength / (g.yMax + math.Abs(g.yMin))
 
-			tmpLines = append(tmpLines, giu.PlotLine(g.driverData[x].name, values))
+	// Black background
+	dc.SetSourceRGB(0.0, 0.0, 0.0)
+	dc.Rectangle(0, 0, width, height)
+	dc.Fill()
+	dc.Stroke()
+
+	// X Axis line - at 0 for the Y value
+	g.yAxisPosForZero = margin + (g.yMax * g.yGap)
+	dc.MoveTo(g.yAxisPos, g.yAxisPosForZero)
+	dc.LineTo(width-margin, g.yAxisPosForZero)
+	dc.Stroke()
+
+	drawYAxis(
+		dc,
+		g.yAxisPos,
+		margin,
+		height-margin,
+		g.yAxisPosForZero,
+		0.0,
+		g.yGap)
+}
+
+func (g *gapperPlot) drawForeground(dc *cairo.Surface) {
+	if g.selectedDriverNumber == NothingSelected {
+		return
+	}
+
+	baseline := g.driverData[g.selectedDriverNumber].fastest
+
+	for key := range g.driverData {
+		if !g.driverData[key].visible {
+			continue
 		}
 
-		g.yMin = yMin
-		g.yMax = yMax
+		// If not enough lap times then draw nothing
+		if len(g.driverData[key].lapTimes) == 0 {
+			continue
+		}
 
-		g.linesLock.Lock()
-		g.lines = tmpLines
-		g.linesLock.Unlock()
+		// Draw line from start position to current position
+		dc.SetSourceRGBA(floatColor(g.driverData[key].color))
+
+		currentXPos := g.yAxisPos
+
+		for x, lapTime := range g.driverData[key].lapTimes {
+			value := lapTime - baseline
+			yPos := g.yAxisPosForZero - (value * g.yGap)
+
+			if x == 0 {
+				dc.MoveTo(currentXPos, yPos)
+			}
+
+			dc.LineTo(currentXPos, yPos)
+
+			currentXPos += g.xGap
+		}
+		dc.Stroke()
+	}
+}
+
+type gapperDriverDisplaySelectWidget struct {
+	id           string
+	drivers      []*gapperPlotInfo
+	plot         *plot
+	visibleCount int
+}
+
+func (c *gapperDriverDisplaySelectWidget) Build() {
+	redraw := false
+	imgui.PushItemWidth(100)
+	if imgui.BeginCombo("Display Data For", fmt.Sprintf("%d drivers", c.visibleCount)) {
+
+		for x := range c.drivers {
+			if imgui.Checkbox(c.drivers[x].name, &c.drivers[x].visible) {
+				redraw = true
+			}
+		}
+
+		imgui.EndCombo()
+	}
+	imgui.PopItemWidth()
+
+	if redraw {
+		// Background refresh will refresh the foreground too
+		c.plot.refreshBackground()
+
+		c.visibleCount = 0
+		for x := range c.drivers {
+			if c.drivers[x].visible {
+				c.visibleCount++
+			}
+		}
 	}
 }

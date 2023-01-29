@@ -183,6 +183,7 @@ type driverDataSelectWidget struct {
 }
 
 func (c *driverDataSelectWidget) Build() {
+	imgui.PushItemWidth(100)
 	if imgui.BeginCombo("Store Data For", fmt.Sprintf("%d drivers", c.numEnabled)) {
 
 		for x := range c.drivers {
@@ -198,6 +199,7 @@ func (c *driverDataSelectWidget) Build() {
 			}
 		}
 	}
+	imgui.PopItemWidth()
 }
 
 type driverDisplaySelectWidget struct {
@@ -213,6 +215,7 @@ func (c *driverDisplaySelectWidget) Build() {
 		selected = c.selected.name
 	}
 
+	imgui.PushItemWidth(100)
 	if imgui.BeginCombo("Display Data For", selected) {
 
 		for x := range c.drivers {
@@ -223,4 +226,5 @@ func (c *driverDisplaySelectWidget) Build() {
 
 		imgui.EndCombo()
 	}
+	imgui.PopItemWidth()
 }

@@ -107,6 +107,9 @@ func (d *dataView) draw(width int, height int) {
 
 	row1StartY := panelHeight + gap
 
+	row2StartY := row1StartY + timingHeight + gap
+	row2Height := (float32(height) - row2StartY) / 2
+
 	// ROW 1
 
 	w = giu.Window(panel.Timing.String()).
@@ -122,25 +125,27 @@ func (d *dataView) draw(width int, height int) {
 		Size(weatherWidth, timingHeight)
 	w.Layout(d.panels[panel.Weather].Draw(0, 0)...)
 
+	telemetryWidth := width
+
 	if d.dataSrc.Session() == Messages.RaceSession || d.dataSrc.Session() == Messages.SprintSession {
 		gapperY := timingWidth + gap + weatherWidth + gap
 		gapperWidth := float32(width) - gapperY
+		gapperHeight := timingHeight + gap + row2Height
 
 		w = giu.Window(panel.GapperPlot.String()).
 			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 			Pos(gapperY, row1StartY).
-			Size(gapperWidth, timingHeight)
-		w.Layout(d.panels[panel.GapperPlot].Draw(int(gapperWidth), int(timingHeight))...)
-	}
+			Size(gapperWidth, gapperHeight)
+		w.Layout(d.panels[panel.GapperPlot].Draw(int(gapperWidth), int(gapperHeight))...)
 
-	row2StartY := row1StartY + timingHeight + gap
-	row2Height := (float32(height) - row2StartY) / 2
+		telemetryWidth = width - int(gap) - int(gapperWidth)
+	}
 
 	// ROW 2
 	w = giu.Window(panel.Telemetry.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 		Pos(0, row2StartY)
-	w.Layout(d.panels[panel.Telemetry].Draw(width, int(row2Height))...)
+	w.Layout(d.panels[panel.Telemetry].Draw(telemetryWidth, int(row2Height))...)
 
 	row3StartY := row2StartY + row2Height + gap
 	row3Height := height - int(row3StartY)
