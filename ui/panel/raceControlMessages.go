@@ -18,6 +18,7 @@ package panel
 import (
 	"fmt"
 	"github.com/AllenDang/giu"
+	"github.com/AllenDang/imgui-go"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
 	"golang.org/x/image/colornames"
@@ -31,13 +32,15 @@ type raceControlMessages struct {
 	rcMessages     []Messages.RaceControlMessage
 	rcMessagesLock sync.Mutex
 	dataChanged    atomic.Bool
+	scrollToBottom *ScrollToBottomWidget
 
 	cachedUI []giu.Widget
 }
 
 func CreateRaceControlMessages() Panel {
 	return &raceControlMessages{
-		rcMessages: make([]Messages.RaceControlMessage, 0),
+		rcMessages:     make([]Messages.RaceControlMessage, 0),
+		scrollToBottom: &ScrollToBottomWidget{id: "scroll to bottom"},
 	}
 }
 
@@ -69,10 +72,12 @@ func (r *raceControlMessages) ProcessRaceControlMessages(data Messages.RaceContr
 }
 
 func (r *raceControlMessages) Draw(width int, height int) []giu.Widget {
-
 	if r.dataChanged.CompareAndSwap(true, false) {
 		r.dataChanged.Store(false)
 		r.cachedUI = r.formatMessages()
+
+		// The first time we redraw after a new message scroll to the bottom
+		return append(r.cachedUI, r.scrollToBottom)
 	}
 
 	return r.cachedUI
@@ -139,4 +144,12 @@ func (r *raceControlMessages) formatMessages() []giu.Widget {
 	r.rcMessagesLock.Unlock()
 
 	return msgs
+}
+
+type ScrollToBottomWidget struct {
+	id string
+}
+
+func (c *ScrollToBottomWidget) Build() {
+	imgui.SetScrollHereY(1.0)
 }
