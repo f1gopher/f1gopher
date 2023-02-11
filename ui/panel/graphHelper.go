@@ -12,18 +12,19 @@ func drawYAxis(
 	bottomY float64,
 	referenceYPos float64,
 	referenceValue float64,
-	pixelGapForOne float64) {
+	pixelGapForOne float64,
+	majorTickIncrement float64) {
 
 	// Y Axis line
-	dc.SetSourceRGB(0.0, 0.0, 1.0)
 	dc.MoveTo(xPos, topY)
 	dc.LineTo(xPos, bottomY)
-	dc.Stroke()
 
-	valueXPos := xPos - 25
+	valueXPos := xPos - 40
 	valueYOffset := 3.0
 	majorTickStartX := xPos - 10
 	minorTickStartX := xPos - 5
+
+	gapForMajorTick := pixelGapForOne * majorTickIncrement
 
 	// Major ticks with values from the reference value up to the top
 	currentTickValue := referenceValue
@@ -34,43 +35,40 @@ func drawYAxis(
 
 		dc.MoveTo(majorTickStartX, yPos)
 		dc.LineTo(xPos, yPos)
-		dc.Stroke()
 
-		yPos -= pixelGapForOne
-		currentTickValue += 1.0
+		yPos -= gapForMajorTick
+		currentTickValue += majorTickIncrement
 	}
 
 	// Major ticks with value from the reference value down to the bottom
-	currentTickValue = referenceValue - 1.0
-	yPos = referenceYPos + pixelGapForOne
+	currentTickValue = referenceValue - majorTickIncrement
+	yPos = referenceYPos + gapForMajorTick
 	for yPos < bottomY {
 		dc.MoveTo(valueXPos, yPos+valueYOffset)
 		dc.ShowText(fmt.Sprintf("%.0f", currentTickValue))
 
 		dc.MoveTo(majorTickStartX, yPos)
 		dc.LineTo(xPos, yPos)
-		dc.Stroke()
 
-		yPos += pixelGapForOne
-		currentTickValue -= 1.0
+		yPos += gapForMajorTick
+		currentTickValue -= majorTickIncrement
 	}
 
-	// Find the most suitable number of minor ticks to show. Default to 0.1 but
-	// if the gap is too small then do 0.5 instead
-	pixelGapForMinorTick := pixelGapForOne / 10.0
-	valueIncrement := 0.1
+	// Find the most suitable number of minor ticks to show. Default to majorTickIncrement/10 but
+	// if the gap is too small then do majorTickIncrement/2 instead
+	pixelGapForMinorTick := gapForMajorTick / 10.0
+	valueIncrement := majorTickIncrement / 10.0
 	if pixelGapForMinorTick < 10.0 {
-		pixelGapForMinorTick = pixelGapForOne / 2.0
-		valueIncrement = 0.5
+		pixelGapForMinorTick = gapForMajorTick / 2.0
+		valueIncrement = majorTickIncrement / 2.0
 	}
 
 	// Minor ticks start from just above the reference value up to the top
 	currentTickValue = referenceValue + valueIncrement
-	yPos = referenceYPos + pixelGapForMinorTick
+	yPos = referenceYPos - pixelGapForMinorTick
 	for yPos > topY {
 		dc.MoveTo(minorTickStartX, yPos)
 		dc.LineTo(xPos, yPos)
-		dc.Stroke()
 
 		yPos -= pixelGapForMinorTick
 		currentTickValue += valueIncrement
@@ -78,13 +76,14 @@ func drawYAxis(
 
 	// Minor ticks start from just below the reference value down to the bottom
 	currentTickValue = referenceValue - valueIncrement
-	yPos = referenceYPos - pixelGapForMinorTick
+	yPos = referenceYPos + pixelGapForMinorTick
 	for yPos < bottomY {
 		dc.MoveTo(minorTickStartX, yPos)
 		dc.LineTo(xPos, yPos)
-		dc.Stroke()
 
 		yPos += pixelGapForMinorTick
 		currentTickValue -= valueIncrement
 	}
+
+	dc.Stroke()
 }

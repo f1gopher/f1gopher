@@ -266,6 +266,7 @@ func (g *gapperPlot) drawBackground(dc *cairo.Surface) {
 		dc.SetSourceRGB(1.0, 1.0, 1.0)
 		dc.MoveTo((width/2)-50, height/2)
 		dc.ShowText("Waiting for data...")
+		dc.Stroke()
 		return
 	}
 
@@ -287,6 +288,7 @@ func (g *gapperPlot) drawBackground(dc *cairo.Surface) {
 	dc.Stroke()
 
 	// X Axis line - at 0 for the Y value
+	dc.SetSourceRGB(0.0, 0.0, 1.0)
 	g.yAxisPosForZero = margin + (g.yMax * g.yGap)
 	dc.MoveTo(g.yAxisPos, g.yAxisPosForZero)
 	dc.LineTo(width-margin, g.yAxisPosForZero)
@@ -299,7 +301,8 @@ func (g *gapperPlot) drawBackground(dc *cairo.Surface) {
 		height-margin,
 		g.yAxisPosForZero,
 		0.0,
-		g.yGap)
+		g.yGap,
+		1.0)
 }
 
 func (g *gapperPlot) drawForeground(dc *cairo.Surface) {

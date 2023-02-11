@@ -18,213 +18,425 @@ package panel
 import (
 	"fmt"
 	"github.com/AllenDang/giu"
-	"github.com/AllenDang/imgui-go"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
+	"github.com/ungerik/go-cairo"
 	"image/color"
 	"sort"
-	"sync/atomic"
 	"time"
 )
 
-type floatPair struct {
-	time  time.Time
-	value float32
-}
-
-type boolPair struct {
-	time  time.Time
-	value bool
-}
-
-type intPair struct {
-	time  time.Time
-	value int16
-}
-
-type bytePair struct {
-	time  time.Time
-	value byte
-}
-
 type telemetryInfo struct {
-	name    string
-	color   color.RGBA
-	number  int
-	enabled bool
-	display bool
+	name   string
+	color  color.RGBA
+	number int
+}
 
-	rpm      []intPair
-	speed    []floatPair
-	gear     []bytePair
-	throttle []floatPair
-	brake    []floatPair
-	drs      []boolPair
+type channelConfig struct {
+	name    string
+	enabled bool
+
+	top                float64
+	bottom             float64
+	gap                float64
+	height             float64
+	maxValue           float64
+	majorTickIncrement float64
+
+	colorR float64
+	colorG float64
+	colorB float64
+
+	value        func(int) float64
+	summaryValue func(int) string
 }
 
 type telemetry struct {
-	data          map[int]*telemetryInfo
-	currentDriver int
-	refresh       atomic.Bool
-	driverNames   []string
+	data                 map[int]*telemetryInfo
+	driverNames          []string
+	selectedDriver       int32
+	selectedDriverNumber int
 
-	dataSelect   *driverDataSelectWidget
-	driverSelect *driverDisplaySelectWidget
+	// TODO - use circular buffer of fixed size?
+	rpm      []int16
+	speed    []float32
+	gear     []byte
+	throttle []float32
+	brake    []float32
+	drs      []bool
+	time     []time.Time
 
-	lines []giu.PlotWidget
+	currentTime     time.Time
+	circuitTimezone *time.Location
+
+	channelSelect *channelDisplaySelectWidget
+
+	plot         *plot
+	yAxisPos     float64
+	xGap         float64
+	endXPos      float64
+	yBottom      float64
+	xWidth       float64
+	summaryWidth float64
+
+	channels []channelConfig
 }
 
 func CreateTelemetry() Panel {
-	return &telemetry{
-		data:  map[int]*telemetryInfo{},
-		lines: []giu.PlotWidget{},
-		dataSelect: &driverDataSelectWidget{
-			id: "telemetryDataSelect",
-		},
-		driverSelect: &driverDisplaySelectWidget{
-			id: "telemetryDriverSelect",
+	panel := &telemetry{
+		data: map[int]*telemetryInfo{},
+		channelSelect: &channelDisplaySelectWidget{
+			id: "telemetryChannelSelect",
 		},
 	}
+	panel.plot = createPlot(panel.drawBackground, panel.drawForeground)
+	panel.channels = []channelConfig{
+		{
+			name:               "Brake",
+			enabled:            true,
+			maxValue:           100.0,
+			majorTickIncrement: 20.0,
+			colorR:             1.0,
+			colorG:             0.0,
+			colorB:             0.0,
+			value:              func(x int) float64 { return float64(panel.brake[x]) },
+			summaryValue:       func(x int) string { return fmt.Sprintf("%.0f%%", panel.brake[x]) },
+		},
+		{
+			name:               "DRS",
+			enabled:            true,
+			maxValue:           1.0,
+			majorTickIncrement: 10.0,
+			colorR:             0.5,
+			colorG:             0.5,
+			colorB:             0.5,
+			value: func(x int) float64 {
+				if panel.drs[x] {
+					return 1.0
+				}
+				return 0.0
+			},
+			summaryValue: func(x int) string {
+				if panel.drs[x] {
+					return "Open"
+				}
+				return "Closed"
+			},
+		},
+		{
+			name:               "Gear",
+			enabled:            true,
+			maxValue:           8.0,
+			majorTickIncrement: 1.0,
+			colorR:             0.0,
+			colorG:             1.0,
+			colorB:             1.0,
+			value:              func(x int) float64 { return float64(panel.gear[x]) },
+			summaryValue:       func(x int) string { return fmt.Sprintf("%d", panel.gear[x]) },
+		},
+		{
+			name:               "RPM",
+			enabled:            true,
+			maxValue:           16000.0,
+			majorTickIncrement: 3000.0,
+			colorR:             1.0,
+			colorG:             1.0,
+			colorB:             0.0,
+			value:              func(x int) float64 { return float64(panel.rpm[x]) },
+			summaryValue:       func(x int) string { return fmt.Sprintf("%d", panel.rpm[x]) },
+		},
+		{
+			name:               "Speed",
+			enabled:            true,
+			maxValue:           380.0,
+			majorTickIncrement: 50.0,
+			colorR:             0.0,
+			colorG:             1.0,
+			colorB:             0.0,
+			value:              func(x int) float64 { return float64(panel.speed[x]) },
+			summaryValue:       func(x int) string { return fmt.Sprintf("%.0f km/hr", panel.speed[x]) },
+		},
+		{
+			name:               "Throttle",
+			enabled:            true,
+			maxValue:           100.0,
+			majorTickIncrement: 20.0,
+			colorR:             0.0,
+			colorG:             0.0,
+			colorB:             1.0,
+			value:              func(x int) float64 { return float64(panel.throttle[x]) },
+			summaryValue:       func(x int) string { return fmt.Sprintf("%.0f%%", panel.throttle[x]) },
+		},
+	}
+	panel.channelSelect.plot = panel.plot
+	panel.channelSelect.channels = &panel.channels
+
+	return panel
 }
 
 func (t *telemetry) ProcessTiming(data Messages.Timing)                          {}
-func (t *telemetry) ProcessEventTime(data Messages.EventTime)                    {}
 func (t *telemetry) ProcessEvent(data Messages.Event)                            {}
 func (t *telemetry) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
 func (t *telemetry) ProcessWeather(data Messages.Weather)                        {}
 func (t *telemetry) ProcessRadio(data Messages.Radio)                            {}
 func (t *telemetry) ProcessLocation(data Messages.Location)                      {}
-func (t *telemetry) Close()                                                      {}
 
 func (t *telemetry) Type() Type { return Telemetry }
 
 func (t *telemetry) Init(dataSrc f1gopherlib.F1GopherLib) {
+	t.circuitTimezone = dataSrc.CircuitTimezone()
 	t.data = map[int]*telemetryInfo{}
-	t.lines = []giu.PlotWidget{}
-	t.currentDriver = -1
-	t.refresh.Store(false)
-	t.dataSelect.drivers = nil
 	t.driverNames = nil
+	t.selectedDriver = NothingSelected
+	t.selectedDriverNumber = NothingSelected
+
+	t.rpm = []int16{}
+	t.speed = []float32{}
+	t.gear = []byte{}
+	t.throttle = []float32{}
+	t.brake = []float32{}
+	t.drs = []bool{}
+	t.time = []time.Time{}
+
+	t.plot.reset()
+}
+
+func (t *telemetry) Close() {
+	t.rpm = nil
+	t.speed = nil
+	t.gear = nil
+	t.throttle = nil
+	t.brake = nil
+	t.drs = nil
+	t.time = nil
 }
 
 func (t *telemetry) ProcessDrivers(data Messages.Drivers) {
 	for x := range data.Drivers {
 		driver := &telemetryInfo{
-			name:     data.Drivers[x].ShortName,
-			number:   data.Drivers[x].Number,
-			color:    data.Drivers[x].Color,
-			enabled:  false,
-			rpm:      []intPair{},
-			speed:    []floatPair{},
-			gear:     []bytePair{},
-			throttle: []floatPair{},
-			brake:    []floatPair{},
-			drs:      []boolPair{},
+			name:   data.Drivers[x].ShortName,
+			number: data.Drivers[x].Number,
+			color:  data.Drivers[x].Color,
 		}
 		t.data[data.Drivers[x].Number] = driver
-		t.dataSelect.drivers = append(t.dataSelect.drivers, driver)
-		t.driverSelect.drivers = append(t.driverSelect.drivers, driver)
 		t.driverNames = append(t.driverNames, driver.name)
 	}
 
-	sort.Slice(t.dataSelect.drivers, func(i, j int) bool {
-		return t.dataSelect.drivers[i].name < t.dataSelect.drivers[j].name
-	})
-	sort.Slice(t.driverSelect.drivers, func(i, j int) bool {
-		return t.driverSelect.drivers[i].name < t.driverSelect.drivers[j].name
-	})
 	sort.Strings(t.driverNames)
 }
 
 func (t *telemetry) ProcessTelemetry(data Messages.Telemetry) {
-	driverInfo, exists := t.data[data.DriverNumber]
-	if !exists || !driverInfo.enabled {
+	// TODO - update lib to let us specify which drivers to send telemetry for to improve performance
+
+	if t.selectedDriverNumber != data.DriverNumber {
 		return
 	}
 
-	driverInfo.rpm = append(driverInfo.rpm, intPair{time: data.Timestamp, value: data.RPM})
-	driverInfo.speed = append(driverInfo.speed, floatPair{time: data.Timestamp, value: data.Speed})
-	driverInfo.gear = append(driverInfo.gear, bytePair{time: data.Timestamp, value: data.Gear})
-	driverInfo.throttle = append(driverInfo.throttle, floatPair{time: data.Timestamp, value: data.Throttle})
-	driverInfo.brake = append(driverInfo.brake, floatPair{time: data.Timestamp, value: data.Brake})
-	driverInfo.drs = append(driverInfo.drs, boolPair{time: data.Timestamp, value: data.DRS})
+	t.rpm = append(t.rpm, data.RPM)
+	t.speed = append(t.speed, data.Speed)
+	t.gear = append(t.gear, data.Gear)
+	t.throttle = append(t.throttle, data.Throttle)
+	t.brake = append(t.brake, data.Brake)
+	t.drs = append(t.drs, data.DRS)
+	t.time = append(t.time, data.Timestamp)
 
-	if t.driverSelect.selected != nil && data.DriverNumber == t.driverSelect.selected.number {
-		t.refresh.Store(true)
-	}
+	// TODO - Only refresh every second?
+	t.plot.refreshForeground()
+}
+
+func (t *telemetry) ProcessEventTime(data Messages.EventTime) {
+	t.currentTime = data.Timestamp
 }
 
 func (t *telemetry) Draw(width int, height int) []giu.Widget {
-	if t.refresh.Load() {
-		t.refresh.Store(false)
-
-		d := []float64{}
-		for x := range t.driverSelect.selected.speed {
-			d = append(d, float64(t.driverSelect.selected.speed[x].value))
-		}
-
-		t.lines = []giu.PlotWidget{giu.PlotLine("Speed", d)}
+	driverName := "<none>"
+	if t.selectedDriver != NothingSelected {
+		driverName = t.driverNames[t.selectedDriver]
 	}
 
 	return []giu.Widget{
 		giu.Row(
-			t.dataSelect,
-			t.driverSelect,
+			giu.Combo("Driver", driverName, t.driverNames, &t.selectedDriver).OnChange(func() {
+				for num, driver := range t.data {
+					if driver.name == t.driverNames[t.selectedDriver] {
+						t.selectedDriverNumber = num
+						break
+					}
+				}
+
+				t.plot.refreshForeground()
+			}).Size(100),
+			t.channelSelect,
 		),
-		giu.Plot("Telemetry").Plots(t.lines...).
-			Size(width-16, height-36),
+		t.plot.draw(width-16, height-38),
 	}
 }
 
-type driverDataSelectWidget struct {
-	id         string
-	drivers    []*telemetryInfo
-	numEnabled int
-}
+func (t *telemetry) drawBackground(dc *cairo.Surface) {
+	width := float64(dc.GetWidth())
+	height := float64(dc.GetHeight())
 
-func (c *driverDataSelectWidget) Build() {
-	imgui.PushItemWidth(100)
-	if imgui.BeginCombo("Store Data For", fmt.Sprintf("%d drivers", c.numEnabled)) {
+	// If no driver selected then draw nothing
+	if t.selectedDriver == NothingSelected {
+		// Black background
+		dc.SetSourceRGB(0.0, 0.0, 0.0)
+		dc.Rectangle(0, 0, width, height)
+		dc.Fill()
+		dc.Stroke()
 
-		for x := range c.drivers {
-			imgui.Checkbox(c.drivers[x].name, &c.drivers[x].enabled)
+		dc.SetSourceRGB(1.0, 1.0, 1.0)
+		dc.MoveTo((width/2)-50, height/2)
+		dc.ShowText("Select Driver")
+		return
+	}
+
+	// Leave border all around the chart
+	margin := 10.0
+	t.yBottom = height - margin - 20
+	yAxisLength := t.yBottom - margin
+
+	// Update top and bottom positions for each channel
+	enabledChannels := 0.0
+	for x := range t.channels {
+		if !t.channels[x].enabled {
+			continue
 		}
 
-		imgui.EndCombo()
+		enabledChannels++
+	}
 
-		c.numEnabled = 0
-		for x := range c.drivers {
-			if c.drivers[x].enabled {
-				c.numEnabled++
+	top := margin
+	for x := range t.channels {
+		if !t.channels[x].enabled {
+			continue
+		}
+
+		t.channels[x].top = top
+
+		// More accurate to just make the last one match the yBottom
+		if x == len(t.channels)-1 {
+			t.channels[x].bottom = t.yBottom
+		} else {
+			plotHeight := yAxisLength * (1.0 / enabledChannels)
+			t.channels[x].bottom = (t.channels[x].top + plotHeight) - 1
+		}
+
+		top = t.channels[x].bottom + 1
+
+		t.channels[x].gap = (t.channels[x].bottom - t.channels[x].top) / t.channels[x].maxValue
+	}
+
+	t.summaryWidth = 60
+	// X location for Y axis
+	t.yAxisPos = margin + 40
+	// X pos end of X axis location
+	t.endXPos = width - margin - t.summaryWidth
+	t.xWidth = t.endXPos - t.yAxisPos
+
+	// Black background
+	dc.SetSourceRGB(0.0, 0.0, 0.0)
+	dc.Rectangle(0, 0, width, height)
+	dc.Fill()
+	dc.Stroke()
+
+	// X Axis line
+	dc.SetSourceRGB(0.0, 0.0, 1.0)
+	dc.MoveTo(t.yAxisPos, t.yBottom)
+	dc.LineTo(t.endXPos, t.yBottom)
+	dc.Stroke()
+
+	for x := range t.channels {
+		if !t.channels[x].enabled {
+			continue
+		}
+
+		dc.SetSourceRGB(t.channels[x].colorR, t.channels[x].colorG, t.channels[x].colorB)
+
+		drawYAxis(
+			dc,
+			t.yAxisPos,
+			t.channels[x].top,
+			t.channels[x].bottom,
+			t.channels[x].bottom,
+			0.0,
+			t.channels[x].gap,
+			t.channels[x].majorTickIncrement)
+	}
+}
+
+func (t *telemetry) drawForeground(dc *cairo.Surface) {
+	// If no driver selected do nothing
+	if t.selectedDriver == NothingSelected || len(t.time) == 0 {
+		return
+	}
+
+	xAxisSecondsLength := 120.0
+	xPixelsPerSecond := t.xWidth / xAxisSecondsLength
+
+	// End is a whole seconds
+	endTime := t.currentTime.Round(time.Second)
+	startTime := endTime.Add(-(time.Second * time.Duration(xAxisSecondsLength)))
+	startOffset := xPixelsPerSecond * endTime.Sub(t.currentTime).Seconds()
+
+	// Draw X axis marks and values
+	dc.SetSourceRGB(0.0, 0.0, 1.0)
+	currentTime := startTime
+	xPos := t.yAxisPos + startOffset
+	for xPos < t.endXPos {
+		if currentTime.Second()%10 != 0 {
+			xPos += xPixelsPerSecond
+			currentTime = currentTime.Add(time.Second)
+			continue
+		}
+
+		dc.MoveTo(xPos, t.yBottom)
+		dc.LineTo(xPos, t.yBottom+15.0)
+
+		dc.MoveTo(xPos-20, t.yBottom+25)
+		dc.ShowText(currentTime.In(t.circuitTimezone).Format("15:04:05"))
+
+		xPos += xPixelsPerSecond
+		currentTime = currentTime.Add(time.Second)
+	}
+	dc.Stroke()
+
+	// Draw data channel
+	last := len(t.time) - 1
+	for _, channel := range t.channels {
+		if !channel.enabled {
+			continue
+		}
+
+		dc.SetSourceRGB(channel.colorR, channel.colorG, channel.colorB)
+
+		currentTime = startTime
+		xPos = t.yAxisPos + startOffset
+		first := true
+
+		// Data line
+		for x := 0; x < len(t.time); x++ {
+			// Don't draw every point. At most one per pixel
+			if t.time[x].Before(currentTime) {
+				continue
 			}
-		}
-	}
-	imgui.PopItemWidth()
-}
 
-type driverDisplaySelectWidget struct {
-	id       string
-	drivers  []*telemetryInfo
-	selected *telemetryInfo
-}
-
-func (c *driverDisplaySelectWidget) Build() {
-
-	selected := ""
-	if c.selected != nil {
-		selected = c.selected.name
-	}
-
-	imgui.PushItemWidth(100)
-	if imgui.BeginCombo("Display Data For", selected) {
-
-		for x := range c.drivers {
-			if imgui.Checkbox(c.drivers[x].name, &c.drivers[x].display) {
-				c.selected = c.drivers[x]
+			if first {
+				dc.MoveTo(xPos, channel.bottom-channel.gap*channel.value(x))
+				first = false
 			}
+
+			dc.LineTo(xPos, channel.bottom-channel.gap*channel.value(x))
+			currentTime = currentTime.Add(time.Second * 1.0)
+			xPos += xPixelsPerSecond
 		}
 
-		imgui.EndCombo()
+		// Summary
+		center := channel.top + ((channel.bottom - channel.top) / 2)
+		dc.MoveTo(t.endXPos+5, center-7)
+		dc.ShowText(channel.name)
+		dc.MoveTo(t.endXPos+5, center+7)
+		dc.ShowText(channel.summaryValue(last))
+
+		dc.Stroke()
 	}
-	imgui.PopItemWidth()
 }
