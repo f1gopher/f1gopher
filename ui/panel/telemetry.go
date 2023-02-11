@@ -52,19 +52,21 @@ type channelConfig struct {
 }
 
 type telemetry struct {
+	dataSrc f1gopherlib.F1GopherLib
+
 	data                 map[int]*telemetryInfo
 	driverNames          []string
 	selectedDriver       int32
 	selectedDriverNumber int
 
 	// TODO - use circular buffer of fixed size?
-	rpm      []int16
-	speed    []float32
-	gear     []byte
-	throttle []float32
-	brake    []float32
-	drs      []bool
-	time     []time.Time
+	rpm      *circularBuffer[int16]
+	speed    *circularBuffer[float32]
+	gear     *circularBuffer[byte]
+	throttle *circularBuffer[float32]
+	brake    *circularBuffer[float32]
+	drs      *circularBuffer[bool]
+	time     *circularBuffer[time.Time]
 
 	currentTime     time.Time
 	circuitTimezone *time.Location
@@ -83,11 +85,20 @@ type telemetry struct {
 }
 
 func CreateTelemetry() Panel {
+	const bufferSize = 150
+
 	panel := &telemetry{
 		data: map[int]*telemetryInfo{},
 		channelSelect: &channelDisplaySelectWidget{
 			id: "telemetryChannelSelect",
 		},
+		rpm:      createCircularBuffer[int16](bufferSize),
+		speed:    createCircularBuffer[float32](bufferSize),
+		gear:     createCircularBuffer[byte](bufferSize),
+		throttle: createCircularBuffer[float32](bufferSize),
+		brake:    createCircularBuffer[float32](bufferSize),
+		drs:      createCircularBuffer[bool](bufferSize),
+		time:     createCircularBuffer[time.Time](bufferSize),
 	}
 	panel.plot = createPlot(panel.drawBackground, panel.drawForeground)
 	panel.channels = []channelConfig{
@@ -99,8 +110,8 @@ func CreateTelemetry() Panel {
 			colorR:             1.0,
 			colorG:             0.0,
 			colorB:             0.0,
-			value:              func(x int) float64 { return float64(panel.brake[x]) },
-			summaryValue:       func(x int) string { return fmt.Sprintf("%.0f%%", panel.brake[x]) },
+			value:              func(x int) float64 { return float64(panel.brake.get(x)) },
+			summaryValue:       func(x int) string { return fmt.Sprintf("%.0f%%", panel.brake.get(x)) },
 		},
 		{
 			name:               "DRS",
@@ -111,13 +122,13 @@ func CreateTelemetry() Panel {
 			colorG:             0.5,
 			colorB:             0.5,
 			value: func(x int) float64 {
-				if panel.drs[x] {
+				if panel.drs.get(x) {
 					return 1.0
 				}
 				return 0.0
 			},
 			summaryValue: func(x int) string {
-				if panel.drs[x] {
+				if panel.drs.get(x) {
 					return "Open"
 				}
 				return "Closed"
@@ -131,8 +142,8 @@ func CreateTelemetry() Panel {
 			colorR:             0.0,
 			colorG:             1.0,
 			colorB:             1.0,
-			value:              func(x int) float64 { return float64(panel.gear[x]) },
-			summaryValue:       func(x int) string { return fmt.Sprintf("%d", panel.gear[x]) },
+			value:              func(x int) float64 { return float64(panel.gear.get(x)) },
+			summaryValue:       func(x int) string { return fmt.Sprintf("%d", panel.gear.get(x)) },
 		},
 		{
 			name:               "RPM",
@@ -142,8 +153,8 @@ func CreateTelemetry() Panel {
 			colorR:             1.0,
 			colorG:             1.0,
 			colorB:             0.0,
-			value:              func(x int) float64 { return float64(panel.rpm[x]) },
-			summaryValue:       func(x int) string { return fmt.Sprintf("%d", panel.rpm[x]) },
+			value:              func(x int) float64 { return float64(panel.rpm.get(x)) },
+			summaryValue:       func(x int) string { return fmt.Sprintf("%d", panel.rpm.get(x)) },
 		},
 		{
 			name:               "Speed",
@@ -153,8 +164,8 @@ func CreateTelemetry() Panel {
 			colorR:             0.0,
 			colorG:             1.0,
 			colorB:             0.0,
-			value:              func(x int) float64 { return float64(panel.speed[x]) },
-			summaryValue:       func(x int) string { return fmt.Sprintf("%.0f km/hr", panel.speed[x]) },
+			value:              func(x int) float64 { return float64(panel.speed.get(x)) },
+			summaryValue:       func(x int) string { return fmt.Sprintf("%.0f km/hr", panel.speed.get(x)) },
 		},
 		{
 			name:               "Throttle",
@@ -164,8 +175,8 @@ func CreateTelemetry() Panel {
 			colorR:             0.0,
 			colorG:             0.0,
 			colorB:             1.0,
-			value:              func(x int) float64 { return float64(panel.throttle[x]) },
-			summaryValue:       func(x int) string { return fmt.Sprintf("%.0f%%", panel.throttle[x]) },
+			value:              func(x int) float64 { return float64(panel.throttle.get(x)) },
+			summaryValue:       func(x int) string { return fmt.Sprintf("%.0f%%", panel.throttle.get(x)) },
 		},
 	}
 	panel.channelSelect.plot = panel.plot
@@ -184,19 +195,20 @@ func (t *telemetry) ProcessLocation(data Messages.Location)                     
 func (t *telemetry) Type() Type { return Telemetry }
 
 func (t *telemetry) Init(dataSrc f1gopherlib.F1GopherLib) {
+	t.dataSrc = dataSrc
 	t.circuitTimezone = dataSrc.CircuitTimezone()
 	t.data = map[int]*telemetryInfo{}
 	t.driverNames = nil
 	t.selectedDriver = NothingSelected
 	t.selectedDriverNumber = NothingSelected
 
-	t.rpm = []int16{}
-	t.speed = []float32{}
-	t.gear = []byte{}
-	t.throttle = []float32{}
-	t.brake = []float32{}
-	t.drs = []bool{}
-	t.time = []time.Time{}
+	t.rpm.reset()
+	t.speed.reset()
+	t.gear.reset()
+	t.throttle.reset()
+	t.brake.reset()
+	t.drs.reset()
+	t.time.reset()
 
 	t.plot.reset()
 }
@@ -226,22 +238,23 @@ func (t *telemetry) ProcessDrivers(data Messages.Drivers) {
 }
 
 func (t *telemetry) ProcessTelemetry(data Messages.Telemetry) {
-	// TODO - update lib to let us specify which drivers to send telemetry for to improve performance
-
 	if t.selectedDriverNumber != data.DriverNumber {
 		return
 	}
 
-	t.rpm = append(t.rpm, data.RPM)
-	t.speed = append(t.speed, data.Speed)
-	t.gear = append(t.gear, data.Gear)
-	t.throttle = append(t.throttle, data.Throttle)
-	t.brake = append(t.brake, data.Brake)
-	t.drs = append(t.drs, data.DRS)
-	t.time = append(t.time, data.Timestamp)
+	t.rpm.add(data.RPM)
+	t.speed.add(data.Speed)
+	t.gear.add(data.Gear)
+	t.throttle.add(data.Throttle)
+	t.brake.add(data.Brake)
+	t.drs.add(data.DRS)
+	t.time.add(data.Timestamp)
 
-	// TODO - Only refresh every second?
-	t.plot.refreshForeground()
+	if t.time.count() == 1 {
+		t.plot.refreshBackground()
+	} else {
+		t.plot.refreshForeground()
+	}
 }
 
 func (t *telemetry) ProcessEventTime(data Messages.EventTime) {
@@ -260,11 +273,23 @@ func (t *telemetry) Draw(width int, height int) []giu.Widget {
 				for num, driver := range t.data {
 					if driver.name == t.driverNames[t.selectedDriver] {
 						t.selectedDriverNumber = num
+
+						// Request data from newly selected driver only
+						t.dataSrc.SelectTelemetrySources([]int{num})
+
+						// Clea existing data
+						t.rpm.reset()
+						t.speed.reset()
+						t.gear.reset()
+						t.throttle.reset()
+						t.brake.reset()
+						t.drs.reset()
+						t.time.reset()
+
+						t.plot.refreshBackground()
 						break
 					}
 				}
-
-				t.plot.refreshForeground()
 			}).Size(100),
 			t.channelSelect,
 		),
@@ -366,7 +391,7 @@ func (t *telemetry) drawBackground(dc *cairo.Surface) {
 
 func (t *telemetry) drawForeground(dc *cairo.Surface) {
 	// If no driver selected do nothing
-	if t.selectedDriver == NothingSelected || len(t.time) == 0 {
+	if t.selectedDriver == NothingSelected || t.time.count() == 0 {
 		return
 	}
 
@@ -401,7 +426,7 @@ func (t *telemetry) drawForeground(dc *cairo.Surface) {
 	dc.Stroke()
 
 	// Draw data channel
-	last := len(t.time) - 1
+	last := t.time.count() - 1
 	for _, channel := range t.channels {
 		if !channel.enabled {
 			continue
@@ -414,9 +439,9 @@ func (t *telemetry) drawForeground(dc *cairo.Surface) {
 		first := true
 
 		// Data line
-		for x := 0; x < len(t.time); x++ {
+		for x := 0; x < t.time.count(); x++ {
 			// Don't draw every point. At most one per pixel
-			if t.time[x].Before(currentTime) {
+			if t.time.get(x).Before(currentTime) {
 				continue
 			}
 
