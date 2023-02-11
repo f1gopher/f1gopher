@@ -145,7 +145,7 @@ func (d *dataView) draw(width int, height int) {
 	w = giu.Window(panel.Telemetry.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 		Pos(0, row2StartY)
-	w.Layout(d.panels[panel.Telemetry].Draw(telemetryWidth, int(row2Height))...)
+	w.Layout(d.panels[panel.Telemetry].Draw(telemetryWidth, int(row2Height-(gap/2)))...)
 
 	row3StartY := row2StartY + row2Height + gap
 	row3Height := height - int(row3StartY)
