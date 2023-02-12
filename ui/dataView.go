@@ -40,6 +40,29 @@ type dataView struct {
 	closeWg   sync.WaitGroup
 }
 
+func createDataView(webView panel.Panel, changeView func(newView screen, info any)) dataScreen {
+	view := dataView{
+		changeView: changeView,
+		panels:     map[panel.Type]panel.Panel{},
+	}
+
+	view.addPanel(panel.CreateInformation(func() { changeView(MainMenu, nil) }))
+	view.addPanel(panel.CreateTiming())
+	view.addPanel(panel.CreateRaceControlMessages())
+	view.addPanel(panel.CreateWeather())
+	view.addPanel(panel.CreateTeamRadio())
+	view.addPanel(panel.CreateTrackMap())
+	view.addPanel(panel.CreateTelemetry())
+
+	// TODO - only create these for race session so that we don't have them processing data even when not displayed
+	view.addPanel(panel.CreateRacePosition())
+	view.addPanel(panel.CreateGapperPlot())
+
+	view.addPanel(webView)
+
+	return &view
+}
+
 func (d *dataView) addPanel(panel panel.Panel) {
 	d.panels[panel.Type()] = panel
 }
