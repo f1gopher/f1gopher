@@ -47,6 +47,8 @@ type trackMap struct {
 	currentHeight      int
 }
 
+const safetyCarDriverNum = 127
+
 func CreateTrackMap() Panel {
 	return &trackMap{
 		mapStore:        CreateTrackMapStore(),
@@ -164,6 +166,9 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 			if exists {
 				driverColor = driverInfo.color
 				driverName = driverInfo.name
+			} else if car.DriverNumber == safetyCarDriverNum {
+				// We don't have driver data for the safety car but once it goes on track we get position info for it
+				driverName = "SC"
 			}
 
 			// Draw marker
