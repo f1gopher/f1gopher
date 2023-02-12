@@ -78,6 +78,9 @@ func (i *information) Draw(width int, height int) []giu.Widget {
 		pauseTxt = "Resume"
 	}
 
+	// Once the remaining time counter is not zero it has started counting down because the session has started
+	hasStarted := i.remainingTime != 0
+
 	panelWidgets := []giu.Widget{
 		giu.Row(
 			i.infoWidgets(),
@@ -86,7 +89,7 @@ func (i *information) Draw(width int, height int) []giu.Widget {
 			}),
 			giu.Button("Skip To Start").OnClick(func() {
 				i.dataSrc.SkipToSessionStart()
-			}),
+			}).Disabled(hasStarted),
 			giu.Button(pauseTxt).OnClick(func() {
 				i.dataSrc.TogglePause()
 			}),
