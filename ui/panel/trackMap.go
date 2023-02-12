@@ -18,6 +18,7 @@ package panel
 import (
 	"image"
 	"image/color"
+	"sort"
 	"sync"
 
 	"github.com/AllenDang/giu"
@@ -146,6 +147,11 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 
 		// Overwrite the previous data with a clean track outline
 		t.mapGc.SetData(t.mapStore.gc.GetData())
+
+		// Sort into a consistent order for drawing so we don't get flickr when drivers are overlapping
+		sort.Slice(cars, func(i, j int) bool {
+			return cars[i].DriverNumber < cars[j].DriverNumber
+		})
 
 		for _, car := range cars {
 			x := car.X
