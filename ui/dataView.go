@@ -89,7 +89,7 @@ func (d *dataView) draw(width int, height int) {
 
 	var gap float32 = 5.0
 	var timingWidth float32 = 1185
-	var timingHeight float32 = 410
+	var timingHeight float32 = 430
 
 	// CONTROLS
 
