@@ -88,8 +88,8 @@ func (d *dataView) draw(width int, height int) {
 	defer d.closeWg.Done()
 
 	var gap float32 = 5.0
-	var timingWidth float32 = 1235
-	var timingHeight float32 = 480
+	var timingWidth float32 = 1185
+	var timingHeight float32 = 410
 
 	// CONTROLS
 
@@ -118,7 +118,7 @@ func (d *dataView) draw(width int, height int) {
 		Size(timingWidth, timingHeight)
 	w.Layout(d.panels[panel.Timing].Draw(0, 0)...)
 
-	const weatherWidth = 200
+	const weatherWidth = 170
 	w = giu.Window(panel.Weather.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 		Pos(timingWidth+gap, row1StartY).

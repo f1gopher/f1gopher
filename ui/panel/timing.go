@@ -98,7 +98,7 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 	table.Columns(
 		giu.TableColumn("Pos").InnerWidthOrWeight(25),
 		giu.TableColumn("Driver").InnerWidthOrWeight(40),
-		giu.TableColumn("Segment").InnerWidthOrWeight(250),
+		giu.TableColumn("Segment").InnerWidthOrWeight(200),
 		giu.TableColumn("Fastest").InnerWidthOrWeight(timeWidth),
 		giu.TableColumn("Gap").InnerWidthOrWeight(timeWidth),
 		giu.TableColumn("S1").InnerWidthOrWeight(timeWidth),
@@ -143,7 +143,8 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 		for s := 0; s < totalSegments; s++ {
 			switch drivers[x].Segment[s] {
 			case Messages.None:
-				segments = append(segments, giu.Label(" "))
+				segments = append(segments, giu.Style().SetColor(giu.StyleColorText, colornames.Lightgray).To(
+					giu.Label("■")))
 			default:
 				segments = append(segments, giu.Style().SetColor(giu.StyleColorText, segmentColor(drivers[x].Segment[s])).To(
 					giu.Label("■")))
