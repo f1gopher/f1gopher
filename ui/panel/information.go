@@ -84,6 +84,9 @@ func (i *information) Draw(width int, height int) []giu.Widget {
 			giu.Button("Skip Minute").OnClick(func() {
 				i.dataSrc.IncrementTime(time.Minute * 1)
 			}),
+			giu.Button("Skip To Start").OnClick(func() {
+				i.dataSrc.SkipToSessionStart()
+			}),
 			giu.Button(pauseTxt).OnClick(func() {
 				i.dataSrc.TogglePause()
 			}),
