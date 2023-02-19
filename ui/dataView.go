@@ -170,13 +170,13 @@ func (d *dataView) draw(width int, height int) {
 	w = giu.Window(panel.Telemetry.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 		Pos(0, row2StartY).
-		Size(telemetryWidth, row2Height-(gap/2))
-	w.Layout(d.panels[panel.Telemetry].Draw(int(telemetryWidth), int(row2Height-(gap/2)))...)
+		Size(telemetryWidth, row2Height)
+	w.Layout(d.panels[panel.Telemetry].Draw(int(telemetryWidth), int(row2Height))...)
 
 	w = giu.Window(panel.Weather.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 		Pos(telemetryWidth+gap, row2StartY).
-		Size(weatherWidth, row2Height-(gap/2))
+		Size(weatherWidth, row2Height)
 	w.Layout(d.panels[panel.Weather].Draw(0, 0)...)
 
 	row3StartY := row2StartY + row2Height + gap
