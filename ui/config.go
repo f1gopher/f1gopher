@@ -18,29 +18,32 @@ package ui
 import (
 	"fmt"
 	"net"
+	"time"
 )
 
 type config struct {
-	autoplayLive         bool
-	liveDelay            int32
-	useCache             bool
-	cacheFolder          string
-	webTimingViewEnabled bool
-	webTimingAddresses   []string
-	webTimingPort        int32
-	showDebugReplay      bool
+	autoplayLive          bool
+	liveDelay             int32
+	useCache              bool
+	cacheFolder           string
+	webTimingViewEnabled  bool
+	webTimingAddresses    []string
+	webTimingPort         int32
+	showDebugReplay       bool
+	predictionPitstopTime time.Duration
 }
 
 func NewConfig() config {
 	c := config{
-		autoplayLive:         false,
-		liveDelay:            0,
-		useCache:             true,
-		cacheFolder:          "./.cache",
-		webTimingViewEnabled: false,
-		webTimingAddresses:   nil,
-		webTimingPort:        8000,
-		showDebugReplay:      false,
+		autoplayLive:          false,
+		liveDelay:             0,
+		useCache:              true,
+		cacheFolder:           "./.cache",
+		webTimingViewEnabled:  false,
+		webTimingAddresses:    nil,
+		webTimingPort:         8000,
+		showDebugReplay:       false,
+		predictionPitstopTime: time.Millisecond * 2500,
 	}
 
 	for _, address := range c.getLocalIP() {

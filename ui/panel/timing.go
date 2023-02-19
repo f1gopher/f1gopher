@@ -40,8 +40,12 @@ type timing struct {
 	theoreticalFastestLap time.Duration
 	previousSessionActive Messages.SessionState
 	fastestSpeedTrap      int
+	timeLostInPitlane     time.Duration
 
-	gapToInfront bool
+	gapToInfront  bool
+	isRaceSession bool
+
+	table *giu.TableWidget
 }
 
 const timeWidth = 75
@@ -74,6 +78,39 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib) {
 	t.theoreticalFastestLap = 0
 	t.previousSessionActive = Messages.UnknownState
 	t.fastestSpeedTrap = 0
+	t.timeLostInPitlane = dataSrc.TimeLostInPitlane()
+	t.isRaceSession = dataSrc.Session() == Messages.RaceSession || dataSrc.Session() == Messages.SprintSession
+
+	t.table = giu.Table().FastMode(true).Flags(giu.TableFlagsResizable | giu.TableFlagsSizingFixedSame)
+	columns := []*giu.TableColumnWidget{
+		giu.TableColumn("Pos").InnerWidthOrWeight(25),
+		giu.TableColumn("Driver").InnerWidthOrWeight(40),
+		giu.TableColumn("Segment").InnerWidthOrWeight(200),
+		giu.TableColumn("Fastest").InnerWidthOrWeight(timeWidth),
+		giu.TableColumn("Gap").InnerWidthOrWeight(timeWidth),
+		giu.TableColumn("S1").InnerWidthOrWeight(timeWidth),
+		giu.TableColumn("S2").InnerWidthOrWeight(timeWidth),
+		giu.TableColumn("S3").InnerWidthOrWeight(timeWidth),
+		giu.TableColumn("Last Lap").InnerWidthOrWeight(timeWidth),
+		giu.TableColumn("DRS").InnerWidthOrWeight(50),
+		giu.TableColumn("Tire").InnerWidthOrWeight(50),
+		giu.TableColumn("Lap").InnerWidthOrWeight(30),
+	}
+
+	if t.isRaceSession {
+		columns = append(columns, []*giu.TableColumnWidget{
+			giu.TableColumn("Pitstops").InnerWidthOrWeight(60),
+			giu.TableColumn("Pit Time").InnerWidthOrWeight(timeWidth),
+			giu.TableColumn("Post Pit Pos").InnerWidthOrWeight(100),
+		}...)
+	}
+
+	columns = append(columns, []*giu.TableColumnWidget{
+		giu.TableColumn("Spd Trp").InnerWidthOrWeight(50),
+		giu.TableColumn("Location").InnerWidthOrWeight(70),
+	}...)
+
+	t.table.Columns(columns...)
 }
 
 func (t *timing) ProcessTiming(data Messages.Timing) {
@@ -93,24 +130,6 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 	drivers := t.orderedDrivers()
 
 	t.updateSessionStats(drivers)
-
-	table := giu.Table().FastMode(true).Flags(giu.TableFlagsResizable | giu.TableFlagsSizingFixedSame)
-	table.Columns(
-		giu.TableColumn("Pos").InnerWidthOrWeight(25),
-		giu.TableColumn("Driver").InnerWidthOrWeight(40),
-		giu.TableColumn("Segment").InnerWidthOrWeight(200),
-		giu.TableColumn("Fastest").InnerWidthOrWeight(timeWidth),
-		giu.TableColumn("Gap").InnerWidthOrWeight(timeWidth),
-		giu.TableColumn("S1").InnerWidthOrWeight(timeWidth),
-		giu.TableColumn("S2").InnerWidthOrWeight(timeWidth),
-		giu.TableColumn("S3").InnerWidthOrWeight(timeWidth),
-		giu.TableColumn("Last Lap").InnerWidthOrWeight(timeWidth),
-		giu.TableColumn("DRS").InnerWidthOrWeight(50),
-		giu.TableColumn("Tire").InnerWidthOrWeight(50),
-		giu.TableColumn("Lap").InnerWidthOrWeight(30),
-		giu.TableColumn("Pitstops").InnerWidthOrWeight(60),
-		giu.TableColumn("Speed Trap").InnerWidthOrWeight(70),
-		giu.TableColumn("Location").InnerWidthOrWeight(70))
 
 	t.eventLock.Lock()
 	totalSegments := t.event.TotalSegments
@@ -161,7 +180,40 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 			gap = drivers[x].TimeDiffToPositionAhead
 		}
 
-		rows = append(rows, giu.TableRow(
+		lastPitlaneTime := ""
+		if len(drivers[x].PitStopTimes) > 0 {
+			lastPitlane := &drivers[x].PitStopTimes[len(drivers[x].PitStopTimes)-1]
+
+			if lastPitlane.PitlaneTime != 0 {
+				lastPitlaneTime = fmtDuration(lastPitlane.PitlaneTime)
+			}
+		}
+
+		positionsLost := drivers[x].Position
+		positionColor := colornames.Green
+		pitTimeLost := t.timeLostInPitlane + time.Millisecond*2500
+		for driverBehind := x + 1; driverBehind < len(drivers); driverBehind++ {
+			pitTimeLost = pitTimeLost - drivers[driverBehind].TimeDiffToPositionAhead
+
+			if pitTimeLost <= 0 {
+				break
+			}
+
+			// Can't drop below stopped cars
+			if drivers[driverBehind].Location == Messages.Stopped ||
+				drivers[driverBehind].Location == Messages.OutOfRace {
+				break
+			}
+
+			positionsLost++
+		}
+
+		potentialPositionChange := fmt.Sprintf("%d", positionsLost)
+		if positionsLost != drivers[x].Position {
+			positionColor = colornames.Red
+		}
+
+		widgets := []giu.Widget{
 			giu.Label(fmt.Sprintf("%d", drivers[x].Position)),
 			giu.Style().SetColor(giu.StyleColorText, drivers[x].Color).To(
 				giu.Label(drivers[x].ShortName)),
@@ -184,12 +236,25 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 			giu.Style().SetColor(giu.StyleColorText, tireColor(drivers[x].Tire)).To(
 				giu.Label(drivers[x].Tire.String())),
 			giu.Label(fmt.Sprintf("%d", drivers[x].LapsOnTire)),
-			giu.Label(fmt.Sprintf("%d", drivers[x].Pitstops)),
+		}
+
+		if t.isRaceSession {
+			widgets = append(widgets, []giu.Widget{
+				giu.Label(fmt.Sprintf("%d", drivers[x].Pitstops)),
+				giu.Label(lastPitlaneTime),
+				giu.Style().SetColor(giu.StyleColorText, positionColor).To(
+					giu.Label(potentialPositionChange)),
+			}...)
+		}
+
+		widgets = append(widgets, []giu.Widget{
 			giu.Style().SetColor(giu.StyleColorText, timeColor(drivers[x].SpeedTrapPersonalFastest, drivers[x].SpeedTrapOverallFastest)).To(
 				giu.Label(speedTrap)),
 			giu.Style().SetColor(giu.StyleColorText, locationColor(drivers[x].Location)).To(
 				giu.Label(drivers[x].Location.String())),
-		))
+		}...)
+
+		rows = append(rows, giu.TableRow(widgets...))
 	}
 
 	// Track segments
@@ -223,7 +288,7 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 	}
 
 	// Session/track info row
-	rows = append(rows, giu.TableRow(
+	rowWidgets := []giu.Widget{
 		giu.Label(""),
 		giu.Label("Track:"),
 		giu.Style().SetStyleFloat(giu.StyleVarItemSpacing, 0).To(giu.Row(trackSegments...)),
@@ -236,12 +301,25 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 		giu.Label(""),
 		giu.Label(""),
 		giu.Label(""),
-		giu.Label(""),
-		giu.Style().SetColor(giu.StyleColorText, colornames.Purple).To(giu.Label(fmt.Sprintf("%d", t.fastestSpeedTrap))),
-		giu.Label(""),
-	))
+	}
 
-	return []giu.Widget{table.Rows(rows...)}
+	if t.isRaceSession {
+		rowWidgets = append(rowWidgets, []giu.Widget{
+			giu.Style().SetColor(giu.StyleColorText, colornames.Purple).To(giu.Label(fmt.Sprintf("%d", t.fastestSpeedTrap))),
+			giu.Label(""),
+			giu.Label(""),
+			giu.Label(""),
+		}...)
+	} else {
+		rowWidgets = append(rowWidgets, []giu.Widget{
+			giu.Label(""),
+			giu.Label(""),
+		}...)
+	}
+
+	rows = append(rows, giu.TableRow(rowWidgets...))
+
+	return []giu.Widget{t.table.Rows(rows...)}
 }
 
 func (t *timing) updateSessionStats(drivers []Messages.Timing) {
