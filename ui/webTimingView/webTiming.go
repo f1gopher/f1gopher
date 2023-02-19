@@ -152,7 +152,7 @@ func (w *WebTiming) Stop() {
 	w.started = false
 }
 
-func (w *WebTiming) Init(dataSrc f1gopherlib.F1GopherLib) {
+func (w *WebTiming) Init(dataSrc f1gopherlib.F1GopherLib, config panel.PanelConfig) {
 	w.dataSrc = dataSrc
 	w.raceSession = dataSrc.Session() == Messages.RaceSession || dataSrc.Session() == Messages.SprintSession
 	w.gapToInfront = w.raceSession

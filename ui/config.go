@@ -79,3 +79,7 @@ func (c *config) getLocalIP() []string {
 	}
 	return ips
 }
+
+func (c *config) PredictedPitstopTime() time.Duration {
+	return c.predictionPitstopTime
+}

@@ -42,8 +42,9 @@ type timing struct {
 	fastestSpeedTrap      int
 	timeLostInPitlane     time.Duration
 
-	gapToInfront  bool
-	isRaceSession bool
+	gapToInfront         bool
+	isRaceSession        bool
+	predictedPitstopTime time.Duration
 
 	table *giu.TableWidget
 }
@@ -67,7 +68,7 @@ func (t *timing) Close()                                                      {}
 
 func (t *timing) Type() Type { return Timing }
 
-func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib) {
+func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	t.gapToInfront = dataSrc.Session() == Messages.RaceSession || dataSrc.Session() == Messages.SprintSession
 
 	// Clear any previous session data
@@ -80,6 +81,7 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib) {
 	t.fastestSpeedTrap = 0
 	t.timeLostInPitlane = dataSrc.TimeLostInPitlane()
 	t.isRaceSession = dataSrc.Session() == Messages.RaceSession || dataSrc.Session() == Messages.SprintSession
+	t.predictedPitstopTime = config.PredictedPitstopTime()
 
 	t.table = giu.Table().FastMode(true).Flags(giu.TableFlagsResizable | giu.TableFlagsSizingFixedSame)
 	columns := []*giu.TableColumnWidget{
@@ -191,7 +193,7 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 
 		positionsLost := drivers[x].Position
 		positionColor := colornames.Green
-		pitTimeLost := t.timeLostInPitlane + time.Millisecond*2500
+		pitTimeLost := t.timeLostInPitlane + t.predictedPitstopTime
 		for driverBehind := x + 1; driverBehind < len(drivers); driverBehind++ {
 			pitTimeLost = pitTimeLost - drivers[driverBehind].TimeDiffToPositionAhead
 

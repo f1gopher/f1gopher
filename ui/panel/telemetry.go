@@ -194,7 +194,7 @@ func (t *telemetry) ProcessLocation(data Messages.Location)                     
 
 func (t *telemetry) Type() Type { return Telemetry }
 
-func (t *telemetry) Init(dataSrc f1gopherlib.F1GopherLib) {
+func (t *telemetry) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	t.dataSrc = dataSrc
 	t.circuitTimezone = dataSrc.CircuitTimezone()
 	t.data = map[int]*telemetryInfo{}

@@ -82,7 +82,7 @@ func (g *gapperPlot) Close()                                                    
 
 func (g *gapperPlot) Type() Type { return GapperPlot }
 
-func (g *gapperPlot) Init(dataSrc f1gopherlib.F1GopherLib) {
+func (g *gapperPlot) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	g.driverData = map[int]*gapperPlotInfo{}
 	g.totalLaps = 0
 	g.driverNames = []string{}

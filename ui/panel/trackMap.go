@@ -68,7 +68,7 @@ func (t *trackMap) Close()                                                      
 
 func (t *trackMap) Type() Type { return TrackMap }
 
-func (t *trackMap) Init(dataSrc f1gopherlib.F1GopherLib) {
+func (t *trackMap) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	// Clear previous session data
 	t.driverPositions = map[int]Messages.Location{}
 	t.driverData = map[int]trackMapInfo{}

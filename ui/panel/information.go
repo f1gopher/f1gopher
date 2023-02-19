@@ -54,7 +54,7 @@ func (i *information) Close()                                                   
 
 func (i *information) Type() Type { return Info }
 
-func (i *information) Init(dataSrc f1gopherlib.F1GopherLib) {
+func (i *information) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	i.dataSrc = dataSrc
 
 	// Clear previous session data

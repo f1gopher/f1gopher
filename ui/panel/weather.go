@@ -22,6 +22,7 @@ import (
 	"golang.org/x/image/colornames"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type weather struct {
@@ -30,6 +31,10 @@ type weather struct {
 	dataChanged atomic.Bool
 
 	cachedUI []giu.Widget
+
+	isRaceSession bool
+	pitlaneTime   time.Duration
+	pitstopTime   time.Duration
 }
 
 func CreateWeather() Panel {
@@ -38,10 +43,13 @@ func CreateWeather() Panel {
 	}
 }
 
-func (w *weather) Init(dataSrc f1gopherlib.F1GopherLib) {
+func (w *weather) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	// Clear previous data
 	w.cachedUI = make([]giu.Widget, 0)
 	w.data = Messages.Weather{}
+	w.isRaceSession = dataSrc.Session() == Messages.RaceSession || dataSrc.Session() == Messages.SprintSession
+	w.pitlaneTime = dataSrc.TimeLostInPitlane()
+	w.pitstopTime = config.PredictedPitstopTime()
 }
 
 func (w *weather) ProcessDrivers(data Messages.Drivers)                        {}
@@ -88,6 +96,13 @@ func (w *weather) widgets() []giu.Widget {
 	widgets = append(widgets, giu.Labelf("Wind Direction: %.0f", w.data.WindDirection))
 	widgets = append(widgets, giu.Labelf("Air Pressure: %.1f", w.data.AirPressure))
 	widgets = append(widgets, giu.Labelf("Humidity: %.1f%%", w.data.Humidity))
+
+	if w.isRaceSession {
+		widgets = append(widgets, giu.Dummy(10, 60))
+		widgets = append(widgets, giu.Labelf("Pitlane Time: %s", w.pitlaneTime.String()))
+		widgets = append(widgets, giu.Labelf("Pitstop Time: %s", w.pitstopTime.String()))
+		widgets = append(widgets, giu.Labelf("Total Time: %s", (w.pitlaneTime+w.pitstopTime).String()))
+	}
 
 	w.dataLock.Unlock()
 

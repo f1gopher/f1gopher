@@ -67,13 +67,13 @@ func (d *dataView) addPanel(panel panel.Panel) {
 	d.panels[panel.Type()] = panel
 }
 
-func (d *dataView) init(dataSrc f1gopherlib.F1GopherLib) {
+func (d *dataView) init(dataSrc f1gopherlib.F1GopherLib, config config) {
 	d.dataSrc = dataSrc
 	d.ctx, d.ctxShutdown = context.WithCancel(context.Background())
 	d.closing = false
 
 	for x := range d.panels {
-		d.panels[x].Init(dataSrc)
+		d.panels[x].Init(dataSrc, &config)
 	}
 
 	// Listen for and handle data messages in the background

@@ -56,7 +56,7 @@ func (r *raceControlMessages) Close()                                   {}
 
 func (r *raceControlMessages) Type() Type { return RaceControlMessages }
 
-func (r *raceControlMessages) Init(dataSrc f1gopherlib.F1GopherLib) {
+func (r *raceControlMessages) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	r.dataSrc = dataSrc
 
 	// Clear previous session data

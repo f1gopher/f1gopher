@@ -46,7 +46,7 @@ type drawableScreen interface {
 type dataScreen interface {
 	drawableScreen
 
-	init(dataSrc f1gopherlib.F1GopherLib)
+	init(dataSrc f1gopherlib.F1GopherLib, config config)
 	close()
 }
 
@@ -201,7 +201,7 @@ func (u *Manager) changeView(newView screen, info any) {
 			u.logger.Errorln("Starting live session", err)
 			return
 		}
-		u.live.init(data)
+		u.live.init(data, u.config)
 
 	case Replay:
 		u.currentSession = info.(*f1gopherlib.RaceEvent)
@@ -215,7 +215,7 @@ func (u *Manager) changeView(newView screen, info any) {
 			u.logger.Errorln("Starting replay session", err)
 			return
 		}
-		u.replay.init(data)
+		u.replay.init(data, u.config)
 
 	case DebugReplay:
 		u.debugReplayFile = info.(string)
@@ -224,7 +224,7 @@ func (u *Manager) changeView(newView screen, info any) {
 			u.logger.Errorln("Starting debug replay session", err)
 			return
 		}
-		u.debugReplay.init(data)
+		u.debugReplay.init(data, u.config)
 	}
 
 	u.previousView = u.view

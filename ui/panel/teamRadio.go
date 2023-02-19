@@ -56,7 +56,7 @@ func (t *teamRadio) ProcessTelemetry(data Messages.Telemetry)                   
 
 func (t *teamRadio) Type() Type { return TeamRadio }
 
-func (t *teamRadio) Init(dataSrc f1gopherlib.F1GopherLib) {
+func (t *teamRadio) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	// Clear previous session data
 	t.radioName = noRadioMessage
 	t.radioMsgs = make([]Messages.Radio, 0)

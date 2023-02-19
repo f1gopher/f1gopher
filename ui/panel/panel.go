@@ -53,7 +53,7 @@ func (t Type) String() string {
 type Panel interface {
 	Type() Type
 
-	Init(dataSrc f1gopherlib.F1GopherLib)
+	Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig)
 	Close()
 
 	Draw(width int, height int) []giu.Widget

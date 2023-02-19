@@ -65,7 +65,7 @@ func (r *racePosition) Close()                                                  
 
 func (r *racePosition) Type() Type { return RacePosition }
 
-func (r *racePosition) Init(dataSrc f1gopherlib.F1GopherLib) {
+func (r *racePosition) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	// Clear previous session data
 	r.driverData = map[int]*info{}
 	r.orderedData = []*info{}
