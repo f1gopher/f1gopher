@@ -113,6 +113,16 @@ func (d *dataView) draw(width int, height int) {
 	var gap float32 = 5.0
 	var timingWidth float32 = 1185
 	var timingHeight float32 = 430
+	const weatherWidth float32 = 170
+	var trackMapWidth float32 = 500
+	var rcmWidth float32 = 800
+
+	// For none race session we don't display some panels
+	if d.dataSrc.Session() != Messages.RaceSession && d.dataSrc.Session() != Messages.SprintSession {
+		timingWidth = float32(width) - gap - weatherWidth
+		trackMapWidth = (float32(width) - gap) / 2.0
+		rcmWidth = trackMapWidth
+	}
 
 	// CONTROLS
 
@@ -134,14 +144,12 @@ func (d *dataView) draw(width int, height int) {
 	row2Height := (float32(height) - row2StartY) / 2
 
 	// ROW 1
-
 	w = giu.Window(panel.Timing.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 		Pos(0, row1StartY).
 		Size(timingWidth, timingHeight)
 	w.Layout(d.panels[panel.Timing].Draw(0, 0)...)
 
-	const weatherWidth = 170
 	w = giu.Window(panel.Weather.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 		Pos(timingWidth+gap, row1StartY).
@@ -167,7 +175,8 @@ func (d *dataView) draw(width int, height int) {
 	// ROW 2
 	w = giu.Window(panel.Telemetry.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
-		Pos(0, row2StartY)
+		Pos(0, row2StartY).
+		Size(float32(telemetryWidth), row2Height-(gap/2))
 	w.Layout(d.panels[panel.Telemetry].Draw(telemetryWidth, int(row2Height-(gap/2)))...)
 
 	row3StartY := row2StartY + row2Height + gap
@@ -178,19 +187,17 @@ func (d *dataView) draw(width int, height int) {
 	w = giu.Window(panel.TrackMap.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 		Pos(0, row3StartY)
-	w.Layout(d.panels[panel.TrackMap].Draw(500, row3Height)...)
-	mapWidth, _ := w.CurrentSize()
+	w.Layout(d.panels[panel.TrackMap].Draw(int(trackMapWidth), row3Height)...)
 
 	w = giu.Window(panel.RaceControlMessages.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove|giu.WindowFlagsAlwaysHorizontalScrollbar|giu.WindowFlagsAlwaysVerticalScrollbar).
-		Pos(mapWidth+gap, row3StartY).
-		Size(800, float32(row3Height))
+		Pos(trackMapWidth+gap, row3StartY).
+		Size(rcmWidth, float32(row3Height))
 	w.Layout(d.panels[panel.RaceControlMessages].Draw(0, 0)...)
-	rcmWidth, _ := w.CurrentSize()
 
 	// Only used for race or sprint sessions
 	if d.dataSrc.Session() == Messages.RaceSession || d.dataSrc.Session() == Messages.SprintSession {
-		pacePosY := mapWidth + gap + rcmWidth + gap
+		pacePosY := trackMapWidth + gap + rcmWidth + gap
 		w = giu.Window(panel.RacePosition.String()).
 			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 			Pos(pacePosY, row3StartY).
