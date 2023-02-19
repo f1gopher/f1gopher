@@ -26,8 +26,9 @@ import (
 )
 
 type information struct {
-	exit    func()
-	dataSrc f1gopherlib.F1GopherLib
+	exit          func()
+	dataSrc       f1gopherlib.F1GopherLib
+	isLiveSession bool
 
 	event         Messages.Event
 	eventLock     sync.Mutex
@@ -35,9 +36,10 @@ type information struct {
 	remainingTime time.Duration
 }
 
-func CreateInformation(exit func()) Panel {
+func CreateInformation(exit func(), isLiveSession bool) Panel {
 	return &information{
-		exit: exit,
+		exit:          exit,
+		isLiveSession: isLiveSession,
 	}
 }
 
@@ -79,11 +81,14 @@ func (i *information) Draw(width int, height int) []giu.Widget {
 	}
 
 	// Once the remaining time counter is not zero it has started counting down because the session has started
-	hasStarted := i.remainingTime != 0
+	hasStarted := i.remainingTime != 0 && !i.isLiveSession
 
 	panelWidgets := []giu.Widget{
 		giu.Row(
 			i.infoWidgets(),
+			giu.Button("Skip 5 Seconds").OnClick(func() {
+				i.dataSrc.IncrementTime(time.Second * 5)
+			}),
 			giu.Button("Skip Minute").OnClick(func() {
 				i.dataSrc.IncrementTime(time.Minute * 1)
 			}),

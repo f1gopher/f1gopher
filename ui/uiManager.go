@@ -114,8 +114,8 @@ func Create(logger *zap.SugaredLogger, wnd *giu.MasterWindow, config config, aut
 		manager.webTiming.Start()
 	}
 
-	manager.live = createDataView(manager.webTiming, manager.changeView)
-	manager.replay = createDataView(manager.webTiming, manager.changeView)
+	manager.live = createDataView(manager.webTiming, manager.changeView, true)
+	manager.replay = createDataView(manager.webTiming, manager.changeView, false)
 	manager.debugReplay = &debugReplayView{dataView{changeView: manager.changeView}}
 
 	// Redraw the main menu screen every second to update the countdown and current session UI

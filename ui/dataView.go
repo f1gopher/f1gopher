@@ -40,13 +40,13 @@ type dataView struct {
 	closeWg   sync.WaitGroup
 }
 
-func createDataView(webView panel.Panel, changeView func(newView screen, info any)) dataScreen {
+func createDataView(webView panel.Panel, changeView func(newView screen, info any), isLiveSession bool) dataScreen {
 	view := dataView{
 		changeView: changeView,
 		panels:     map[panel.Type]panel.Panel{},
 	}
 
-	view.addPanel(panel.CreateInformation(func() { changeView(MainMenu, nil) }))
+	view.addPanel(panel.CreateInformation(func() { changeView(MainMenu, nil) }, isLiveSession))
 	view.addPanel(panel.CreateTiming())
 	view.addPanel(panel.CreateRaceControlMessages())
 	view.addPanel(panel.CreateWeather())
