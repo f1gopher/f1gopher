@@ -52,7 +52,7 @@ func main() {
 
 	sugar.Infof("F1Gopher v%s", version)
 
-	giu.SetDefaultFontFromBytes(DefaultFont, 12.0)
+	giu.SetDefaultFontFromBytes(DefaultFont, 14.0)
 
 	wnd := giu.NewMasterWindow(
 		fmt.Sprintf("F1Gopher - v%s", version),

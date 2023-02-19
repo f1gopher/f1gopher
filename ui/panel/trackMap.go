@@ -39,6 +39,8 @@ type trackMap struct {
 	driverData          map[int]trackMapInfo
 	driverPositions     map[int]Messages.Location
 	driverPositionsLock sync.Mutex
+	event               Messages.Event
+	eventLock           sync.Mutex
 
 	trackTexture       *giu.Texture
 	trackTextureWidth  float32
@@ -59,7 +61,6 @@ func CreateTrackMap() Panel {
 }
 
 func (t *trackMap) ProcessEventTime(data Messages.EventTime)                    {}
-func (t *trackMap) ProcessEvent(data Messages.Event)                            {}
 func (t *trackMap) ProcessRaceControlMessages(data Messages.RaceControlMessage) {}
 func (t *trackMap) ProcessWeather(data Messages.Weather)                        {}
 func (t *trackMap) ProcessRadio(data Messages.Radio)                            {}
@@ -98,6 +99,12 @@ func (t *trackMap) ProcessLocation(data Messages.Location) {
 
 func (t *trackMap) ProcessTiming(data Messages.Timing) {
 	t.mapStore.ProcessTiming(data)
+}
+
+func (t *trackMap) ProcessEvent(data Messages.Event) {
+	t.eventLock.Lock()
+	t.event = data
+	t.eventLock.Unlock()
 }
 
 func (t *trackMap) Draw(width int, height int) []giu.Widget {
@@ -173,6 +180,14 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 				driverColor = driverInfo.color
 				driverName = driverInfo.name
 			} else if car.DriverNumber == safetyCarDriverNum {
+				// If we are not under safety car conditions then don't display the safety car on the map
+				t.eventLock.Lock()
+				if t.event.SafetyCar != Messages.SafetyCar && t.event.SafetyCar != Messages.SafetyCarEnding {
+					t.eventLock.Unlock()
+					continue
+				}
+				t.eventLock.Unlock()
+
 				// We don't have driver data for the safety car but once it goes on track we get position info for it
 				driverName = "SC"
 			}
