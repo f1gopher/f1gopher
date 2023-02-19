@@ -16,6 +16,7 @@
 package main
 
 import (
+	_ "embed"
 	"f1gopher/ui"
 	"flag"
 	"fmt"
@@ -25,6 +26,9 @@ import (
 	"github.com/f1gopher/f1gopherlib"
 	"go.uber.org/zap"
 )
+
+//go:embed "JetBrainsMono-Regular.ttf"
+var DefaultFont []byte
 
 func main() {
 	// defer profile.Start(profile.ProfilePath(".")).Stop()
@@ -47,6 +51,8 @@ func main() {
 	sugar := logger.Sugar()
 
 	sugar.Infof("F1Gopher v%s", version)
+
+	giu.SetDefaultFontFromBytes(DefaultFont, 12.0)
 
 	wnd := giu.NewMasterWindow(
 		fmt.Sprintf("F1Gopher - v%s", version),
