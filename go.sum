@@ -47,6 +47,8 @@ github.com/f1gopher/f1gopherlib v0.9.1-0.20230212125353-ddaea64f27ce h1:tXVlLq9h
 github.com/f1gopher/f1gopherlib v0.9.1-0.20230212125353-ddaea64f27ce/go.mod h1:U1D/cLtBgWE33Z0eJd3QPw6dOsjw8RAW8z9tKYCv2c4=
 github.com/f1gopher/f1gopherlib v0.9.1-0.20230219145941-80ffac4344eb h1:A7mPJDiRnM/xfajaMNagGZHIKhspLyMmT6EbWua9/Yk=
 github.com/f1gopher/f1gopherlib v0.9.1-0.20230219145941-80ffac4344eb/go.mod h1:U1D/cLtBgWE33Z0eJd3QPw6dOsjw8RAW8z9tKYCv2c4=
+github.com/f1gopher/f1gopherlib v0.9.1-0.20230222212043-75e461aef6d0 h1:HBfQliFvTMhvBqGzB6HHjCgKYhgHDouBF2KMk/InDT8=
+github.com/f1gopher/f1gopherlib v0.9.1-0.20230222212043-75e461aef6d0/go.mod h1:U1D/cLtBgWE33Z0eJd3QPw6dOsjw8RAW8z9tKYCv2c4=
 github.com/f1gopher/signalr/v2 v2.0.0-20221210121059-1985aaf5fb97 h1:ake47TNb+vBn+r4dlB23hh6J/Hi0AZraq28ZaQrKBoQ=
 github.com/f1gopher/signalr/v2 v2.0.0-20221210121059-1985aaf5fb97/go.mod h1:I+Wlu0JSNF8jkGxWKW6X6B1hlLM/fMcJq23drxf3MkE=
 github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3 h1:baVdMKlASEHrj19iqjARrPbaRisD7EuZEVJj6ZMLl1Q=

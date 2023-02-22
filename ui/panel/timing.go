@@ -191,30 +191,6 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 			}
 		}
 
-		positionsLost := drivers[x].Position
-		positionColor := colornames.Green
-		pitTimeLost := t.timeLostInPitlane + t.predictedPitstopTime
-		for driverBehind := x + 1; driverBehind < len(drivers); driverBehind++ {
-			pitTimeLost = pitTimeLost - drivers[driverBehind].TimeDiffToPositionAhead
-
-			if pitTimeLost <= 0 {
-				break
-			}
-
-			// Can't drop below stopped cars
-			if drivers[driverBehind].Location == Messages.Stopped ||
-				drivers[driverBehind].Location == Messages.OutOfRace {
-				break
-			}
-
-			positionsLost++
-		}
-
-		potentialPositionChange := fmt.Sprintf("%d", positionsLost)
-		if positionsLost != drivers[x].Position {
-			positionColor = colornames.Red
-		}
-
 		widgets := []giu.Widget{
 			giu.Label(fmt.Sprintf("%d", drivers[x].Position)),
 			giu.Style().SetColor(giu.StyleColorText, drivers[x].Color).To(
@@ -241,6 +217,50 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 		}
 
 		if t.isRaceSession {
+			newPosition := drivers[x].Position
+			positionColor := colornames.Green
+			pitTimeLost := t.timeLostInPitlane + t.predictedPitstopTime
+			// Default value for the last car because we won't enter the loop
+			var timeToCarAhead = pitTimeLost
+			var timeToCarBehind time.Duration
+			for driverBehind := x + 1; driverBehind < len(drivers); driverBehind++ {
+				timeToCarAhead = pitTimeLost
+
+				// Can't drop below stopped cars
+				if drivers[driverBehind].Location == Messages.Stopped ||
+					drivers[driverBehind].Location == Messages.OutOfRace {
+					break
+				}
+
+				if drivers[driverBehind].TimeDiffToPositionAhead-pitTimeLost >= 0 {
+					timeToCarBehind = drivers[driverBehind].TimeDiffToPositionAhead - timeToCarAhead
+					break
+				}
+
+				pitTimeLost = pitTimeLost - drivers[driverBehind].TimeDiffToPositionAhead
+
+				newPosition++
+			}
+
+			if newPosition == drivers[x].Position {
+				timeToCarAhead += drivers[x].TimeDiffToPositionAhead
+			}
+
+			var potentialPositionChange string
+			if drivers[x].Location != Messages.Stopped && drivers[x].Location != Messages.OutOfRace {
+				if newPosition == 1 {
+					potentialPositionChange = fmt.Sprintf("%02d>%s", newPosition, t.fmtGapDuration(timeToCarBehind))
+				} else if timeToCarBehind == 0 {
+					potentialPositionChange = fmt.Sprintf("%s<%02d", t.fmtGapDuration(timeToCarAhead), newPosition)
+				} else {
+					potentialPositionChange = fmt.Sprintf("%s<%02d>%s", t.fmtGapDuration(timeToCarAhead), newPosition, t.fmtGapDuration(timeToCarBehind))
+				}
+			}
+
+			if newPosition != drivers[x].Position {
+				positionColor = colornames.Red
+			}
+
 			widgets = append(widgets, []giu.Widget{
 				giu.Label(fmt.Sprintf("%d", drivers[x].Pitstops)),
 				giu.Label(lastPitlaneTime),
@@ -381,4 +401,22 @@ func (t *timing) orderedDrivers() []Messages.Timing {
 		return drivers[i].Position < drivers[j].Position
 	})
 	return drivers
+}
+
+func (t *timing) fmtGapDuration(d time.Duration) string {
+	milliseconds := d.Milliseconds()
+
+	minutes := milliseconds / (1000 * 60)
+	milliseconds -= minutes * 60 * 1000
+	seconds := milliseconds / 1000
+	milliseconds -= seconds * 1000
+	// Only want to display to a tenth of a second
+	milliseconds = milliseconds / 100
+
+	// If no minutes then don't display zero but pad with spaces for display alignment
+	if minutes == 0 {
+		return fmt.Sprintf("%02d.%01d", seconds, milliseconds)
+	}
+
+	return fmt.Sprintf("%02d:%02d.%01d", minutes, seconds, milliseconds)
 }
