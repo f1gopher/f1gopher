@@ -129,7 +129,7 @@ func (m *mainMenu) draw(width int, height int) {
 		Layout(
 			giu.PrepareMsgbox(),
 			giu.Button("Live").Size(buttonWidth, buttonHeight).OnClick(func() {
-				m.changeView(Live, nil)
+				m.changeView(Live, m.liveSession)
 			}).Disabled(!isLive),
 			giu.Button("Replay").Size(buttonWidth, buttonHeight).OnClick(func() {
 				m.changeView(ReplayMenu, nil)
