@@ -73,7 +73,10 @@ func (t *trackMap) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	// Clear previous session data
 	t.driverPositions = map[int]Messages.Location{}
 	t.driverData = map[int]trackMapInfo{}
-	t.mapGc = nil
+	if t.mapGc != nil {
+		t.mapGc.Destroy()
+		t.mapGc = nil
+	}
 	t.currentWidth = 0
 	t.currentHeight = 0
 
@@ -143,6 +146,9 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 
 	if available {
 		if t.mapGc == nil || displayWidth != t.currentWidth || displayHeight != t.currentHeight {
+			if t.mapGc != nil {
+				t.mapGc.Destroy()
+			}
 			t.mapGc = cairo.NewSurface(cairo.FORMAT_ARGB32, displayWidth, displayHeight)
 			t.mapGc.SelectFontFace("sans-serif", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
 			t.mapGc.SetFontSize(10.0)

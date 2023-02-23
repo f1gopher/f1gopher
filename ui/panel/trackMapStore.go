@@ -97,7 +97,10 @@ func (t *trackMapStore) SelectTrack(name string, year int) {
 				t.targetDriver = 0
 				t.currentWidth = 0
 				t.currentHeight = 0
-				t.gc = nil
+				if t.gc != nil {
+					t.gc.Destroy()
+					t.gc = nil
+				}
 				return
 			}
 		}
@@ -116,7 +119,10 @@ func (t *trackMapStore) SelectTrack(name string, year int) {
 	t.pitlaneReady = false
 	t.currentWidth = 0
 	t.currentHeight = 0
-	t.gc = nil
+	if t.gc != nil {
+		t.gc.Destroy()
+		t.gc = nil
+	}
 
 	t.locations = make([]Messages.Location, 0)
 	t.trackStart = time.Time{}
@@ -186,6 +192,9 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 			t.currentTrack.yOffset = (height - (mapCentreOffsetY + mapMarginY)) * 2
 		}
 
+		if t.gc != nil {
+			t.gc.Destroy()
+		}
 		t.gc = cairo.NewSurface(cairo.FORMAT_ARGB32, width, height)
 		t.gc.SetSourceRGBA(
 			float64(t.backgroundColor.R)/255.0,

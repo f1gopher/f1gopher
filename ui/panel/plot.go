@@ -92,9 +92,17 @@ func (p *plot) redraw(width int, height int) {
 	}
 
 	if p.backgroundGc == nil || p.foregroundGc == nil || sizeChanged {
+		if p.backgroundGc != nil {
+			p.backgroundGc.Destroy()
+		}
+
 		p.backgroundGc = cairo.NewSurface(cairo.FORMAT_ARGB32, width, height)
 		p.backgroundGc.SelectFontFace("sans-serif", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
 		p.backgroundGc.SetFontSize(10.0)
+
+		if p.foregroundGc != nil {
+			p.foregroundGc.Destroy()
+		}
 
 		p.foregroundGc = cairo.NewSurface(cairo.FORMAT_ARGB32, width, height)
 		p.foregroundGc.SelectFontFace("sans-serif", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
