@@ -101,7 +101,11 @@ func (r *racePosition) ProcessEvent(data Messages.Event) {
 }
 
 func (r *racePosition) ProcessTiming(data Messages.Timing) {
-	driverInfo := r.driverData[data.Number]
+	driverInfo, exists := r.driverData[data.Number]
+
+	if !exists {
+		return
+	}
 
 	count := len(driverInfo.positions)
 	if count == data.Lap {

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
+	"github.com/f1gopher/f1gopherlib/Messages"
 )
 
 type replayMenu struct {
@@ -45,12 +46,14 @@ func (r *replayMenu) draw(width int, height int) {
 			giu.Child().Size(menuWidth, menuHeight-84).Layout(
 				giu.RangeBuilder("Buttons", r.history, func(i int, v interface{}) giu.Widget {
 					session := v.(f1gopherlib.RaceEvent)
+					// Pre-season test session don't have a useful url so we can't replay them
 					return giu.
 						Button(fmt.Sprintf("%s %s - %s", session.EventTime.Format("2006"), session.Name, session.Type.String())).
 						Size(buttonWidth, buttonHeight).
 						OnClick(func() {
 							r.changeView(Replay, &session)
-						})
+						}).
+						Disabled(session.Type == Messages.PreSeasonSession)
 				})),
 			giu.Dummy(1, 20),
 			giu.Button("Back").OnClick(func() {

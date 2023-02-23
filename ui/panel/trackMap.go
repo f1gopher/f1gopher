@@ -139,7 +139,7 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 	// Widget has a margin the image needs to fit in
 	displayWidth := width - 16
 	displayHeight := height - 16
-	available, scaling, xOffset, yOffset := t.mapStore.MapAvailable(displayWidth, displayHeight)
+	available, scaling, xOffset, yOffset, rotation := t.mapStore.MapAvailable(displayWidth, displayHeight)
 
 	if available {
 		if t.mapGc == nil || displayWidth != t.currentWidth || displayHeight != t.currentHeight {
@@ -159,6 +159,11 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 		sort.Slice(cars, func(i, j int) bool {
 			return cars[i].DriverNumber < cars[j].DriverNumber
 		})
+
+		// Rotate around the centre of the track
+		t.mapGc.Translate(float64(displayWidth)/2, float64(displayHeight)/2)
+		t.mapGc.Rotate(rotation)
+		t.mapGc.Translate(-float64(displayWidth)/2, -float64(displayHeight)/2)
 
 		for _, car := range cars {
 			x := car.X

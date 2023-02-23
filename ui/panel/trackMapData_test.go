@@ -14,6 +14,42 @@ import (
 	"time"
 )
 
+type fudgeFactors struct {
+	rotation float64
+}
+
+var fudge = map[string]fudgeFactors{
+	"Albert Park Grand Prix Circuit":              {rotation: -0.7},
+	"Autodromo Enzo e Dino Ferrari":               {rotation: 0.0},
+	"Autódromo Hermanos Rodríguez":                {rotation: -0.1},
+	"Autódromo Internacional do Algarve":          {rotation: 1.8708},
+	"Autodromo Internazionale del Mugello":        {rotation: 1.1708},
+	"Autódromo José Carlos Pace":                  {rotation: 1.5708},
+	"Autodromo Nazionale di Monza":                {rotation: 1.4708},
+	"Bahrain International Circuit":               {rotation: 1.535},
+	"Bahrain International Circuit - Outer Track": {rotation: 1.535},
+	"Baku City Circuit":                           {rotation: 0.7},
+	"Circuit de Barcelona-Catalunya":              {rotation: -2.1008},
+	"Circuit de Monaco":                           {rotation: 0.7},
+	"Circuit de Spa-Francorchamps":                {rotation: 1.5708},
+	"Circuit Gilles Villeneuve":                   {rotation: -1.2708},
+	"Circuit of the Americas":                     {rotation: -0.2},
+	"Circuit Paul Ricard":                         {rotation: 0.2},
+	"Circuit Park Zandvoort":                      {rotation: 0.0},
+	"Hungaroring":                                 {rotation: 2.4708},
+	"Istanbul Park":                               {rotation: 0.2},
+	"Jeddah Corniche Circuit":                     {rotation: -0.75},
+	"Losail International Circuit":                {rotation: 2.1},
+	"Marina Bay Street Circuit":                   {rotation: -1.5708},
+	"Miami International Autodrome":               {rotation: 0.0},
+	"Nürburgring":                                 {rotation: 0.3},
+	"Red Bull Ring":                               {rotation: -2.9},
+	"Silverstone Circuit":                         {rotation: 1.5708},
+	"Sochi Autodrom":                              {rotation: 0.0},
+	"Suzuka Circuit":                              {rotation: 0.4},
+	"Yas Marina Circuit":                          {rotation: 1.5708},
+}
+
 func TestCreateTrackMaps(t *testing.T) {
 	mapStore := CreateTrackMapStore()
 	mapStore.tracks = map[string][]*trackInfo{}
@@ -48,7 +84,7 @@ func TestCreateTrackMaps(t *testing.T) {
 
 		mapStore.SelectTrack(data.Track(), session.TrackYearCreated)
 
-		exists, _, _, _ := mapStore.MapAvailable(100, 100)
+		exists, _, _, _, _ := mapStore.MapAvailable(100, 100)
 		if exists {
 			data.Close()
 			continue
@@ -97,6 +133,12 @@ func TestCreateTrackMaps(t *testing.T) {
 			}
 		}
 
+		// Apply fudging to rotate the track and display better
+		fudgeInfo, exists := fudge[mapStore.currentTrack.name]
+		if exists {
+			mapStore.currentTrack.rotation = fudgeInfo.rotation
+		}
+
 		data.Close()
 	}
 
@@ -115,7 +157,7 @@ func TestSaveTrackMapsToDisk(t *testing.T) {
 		for _, track := range tracks {
 			mapStore.SelectTrack(trackName, track.yearCreated)
 
-			mapStore.MapAvailable(500, 500)
+			mapStore.MapAvailable(800, 500)
 
 			f, err := os.Create(fmt.Sprintf("../../track images/%s-%d.png", trackName, track.yearCreated))
 			if err != nil {

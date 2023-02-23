@@ -141,7 +141,10 @@ func (g *gapperPlot) ProcessTiming(data Messages.Timing) {
 		return
 	}
 
-	driverInfo := g.driverData[data.Number]
+	driverInfo, exists := g.driverData[data.Number]
+	if !exists {
+		return
+	}
 
 	// We don't get a lap time for the first lap
 	if data.Lap == len(driverInfo.lapTimes)+2 {

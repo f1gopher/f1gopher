@@ -24,6 +24,7 @@ import (
 	"image/color"
 	"math"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -39,6 +40,7 @@ type trackInfo struct {
 	maxX        int
 	minY        int
 	maxY        int
+	rotation    float64
 }
 
 type trackMapStore struct {
@@ -108,6 +110,7 @@ func (t *trackMapStore) SelectTrack(name string, year int) {
 		yearCreated: year,
 		outline:     make([]image.Point, 0),
 		pitlane:     make([]image.Point, 0),
+		rotation:    0,
 	}
 	t.trackReady = false
 	t.pitlaneReady = false
@@ -124,12 +127,12 @@ func (t *trackMapStore) SelectTrack(name string, year int) {
 	t.targetDriver = 0
 }
 
-func (t *trackMapStore) MapAvailable(width int, height int) (available bool, scaling float64, xOffset int, yOffset int) {
+func (t *trackMapStore) MapAvailable(width int, height int) (available bool, scaling float64, xOffset int, yOffset int, rotation float64) {
 	if t.trackReady {
 		// If the width and height haven't changed since the last time we drew the track outline
 		// then don't redraw just return
 		if t.gc != nil && width == t.currentWidth && height == t.currentHeight {
-			return t.trackReady, t.currentTrack.scaling, t.currentTrack.xOffset, t.currentTrack.yOffset
+			return t.trackReady, t.currentTrack.scaling, t.currentTrack.xOffset, t.currentTrack.yOffset, t.currentTrack.rotation
 		}
 
 		t.currentWidth = width
@@ -141,23 +144,47 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 		const border = 50
 
 		// Pick the best scaling option to fill the display
-		a := xRange / float64(width-border)
-		b := yRange / float64(height-border)
-		if a > b {
-			t.currentTrack.scaling = a
+		var a, b float64
+		// If we rotate width and height are swapped
+		if t.currentTrack.name != "Bahrain International Circuit" {
+			a = xRange / float64(width-border)
+			b = yRange / float64(height-border)
+
+			if a > b {
+				t.currentTrack.scaling = a
+			} else {
+				t.currentTrack.scaling = b
+			}
+
+			// X
+			mapCentreOffsetX := int(float64(t.currentTrack.maxX) / t.currentTrack.scaling)
+			mapMarginX := int((float64(width) - (xRange / t.currentTrack.scaling)) / 2)
+			t.currentTrack.xOffset = mapCentreOffsetX + mapMarginX
+
+			// Y
+			mapCentreOffsetY := int(float64(t.currentTrack.maxY) / t.currentTrack.scaling)
+			mapMarginY := int((float64(height) - (yRange / t.currentTrack.scaling)) / 2)
+			t.currentTrack.yOffset = height - (mapCentreOffsetY + mapMarginY)
 		} else {
-			t.currentTrack.scaling = b
+			a = yRange / float64(width-border)
+			b = xRange / float64(height-border)
+
+			if a > b {
+				t.currentTrack.scaling = a
+			} else {
+				t.currentTrack.scaling = b
+			}
+
+			// X
+			mapCentreOffsetX := int(float64(t.currentTrack.maxY) / t.currentTrack.scaling)
+			mapMarginX := int((float64(width) - (yRange / t.currentTrack.scaling)) / 2)
+			t.currentTrack.xOffset = mapCentreOffsetX + mapMarginX
+
+			// Y
+			mapCentreOffsetY := int(float64(t.currentTrack.maxX) / t.currentTrack.scaling)
+			mapMarginY := int((float64(height) - (xRange / t.currentTrack.scaling)) / 2)
+			t.currentTrack.yOffset = (height - (mapCentreOffsetY + mapMarginY)) * 2
 		}
-
-		// X
-		mapCentreOffsetX := int(float64(t.currentTrack.maxX) / t.currentTrack.scaling)
-		mapMarginX := int((float64(width) - (xRange / t.currentTrack.scaling)) / 2)
-		t.currentTrack.xOffset = mapCentreOffsetX + mapMarginX
-
-		// Y
-		mapCentreOffsetY := int(float64(t.currentTrack.maxY) / t.currentTrack.scaling)
-		mapMarginY := int((float64(height) - (yRange / t.currentTrack.scaling)) / 2)
-		t.currentTrack.yOffset = height - (mapCentreOffsetY + mapMarginY)
 
 		t.gc = cairo.NewSurface(cairo.FORMAT_ARGB32, width, height)
 		t.gc.SetSourceRGBA(
@@ -167,6 +194,26 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 			float64(t.backgroundColor.A)/255.0)
 		t.gc.Rectangle(0, 0, float64(t.gc.GetWidth()), float64(t.gc.GetHeight()))
 		t.gc.Fill()
+
+		t.gc.SetSourceRGBA(
+			1,
+			0,
+			0,
+			1)
+
+		// Rotate around the centre of the track
+		t.gc.Translate(float64(width)/2, float64(height)/2)
+		t.gc.Rotate(t.currentTrack.rotation)
+
+		// Center marker
+		//t.gc.NewPath()
+		//t.gc.MoveTo(-100, 0)
+		//t.gc.LineTo(100, 0)
+		//t.gc.MoveTo(0, -100)
+		//t.gc.LineTo(0, 100)
+		//t.gc.Stroke()
+
+		t.gc.Translate(-float64(width)/2, -float64(height)/2)
 
 		// Pitlane
 		color := colornames.Yellow
@@ -217,10 +264,10 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 
 		t.gc.Flush()
 
-		return t.trackReady, t.currentTrack.scaling, t.currentTrack.xOffset, t.currentTrack.yOffset
+		return t.trackReady, t.currentTrack.scaling, t.currentTrack.xOffset, t.currentTrack.yOffset, t.currentTrack.rotation
 	}
 
-	return false, 0.0, 0, 0
+	return false, 0.0, 0, 0, 0
 }
 
 func (t *trackMapStore) ProcessLocation(data Messages.Location) {
@@ -413,7 +460,14 @@ import (
 var trackMapData = []trackInfo{
 `)
 
-	for x := range t.tracks {
+	// Sort tracks into alphabetical order so they are written to disk in a consistent way
+	var trackNames []string
+	for name := range t.tracks {
+		trackNames = append(trackNames, name)
+	}
+	sort.Strings(trackNames)
+
+	for _, x := range trackNames {
 		for _, track := range t.tracks[x] {
 			f.WriteString("\t{\n")
 			f.WriteString(fmt.Sprintf("\t\tname: \"%s\",\n", track.name))
@@ -432,6 +486,7 @@ var trackMapData = []trackInfo{
 			f.WriteString(fmt.Sprintf("\t\tmaxX: %d,\n", track.maxX))
 			f.WriteString(fmt.Sprintf("\t\tminY: %d,\n", track.minY))
 			f.WriteString(fmt.Sprintf("\t\tmaxY: %d,\n", track.maxY))
+			f.WriteString(fmt.Sprintf("\t\trotation: %f,\n", track.rotation))
 			f.WriteString("\t},\n")
 		}
 	}
