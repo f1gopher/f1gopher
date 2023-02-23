@@ -201,6 +201,8 @@ func (t *telemetry) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	t.driverNames = nil
 	t.selectedDriver = NothingSelected
 	t.selectedDriverNumber = NothingSelected
+
+	t.plot.reset()
 }
 
 func (t *telemetry) Close() {
@@ -211,8 +213,6 @@ func (t *telemetry) Close() {
 	t.brake.reset()
 	t.drs.reset()
 	t.time.reset()
-
-	t.plot.reset()
 }
 
 func (t *telemetry) ProcessDrivers(data Messages.Drivers) {
