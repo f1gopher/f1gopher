@@ -16,8 +16,10 @@
 package panel
 
 import (
+	"github.com/AllenDang/imgui-go"
 	"image"
 	"image/color"
+	"image/draw"
 	"sort"
 	"sync"
 
@@ -42,7 +44,7 @@ type trackMap struct {
 	event               Messages.Event
 	eventLock           sync.Mutex
 
-	trackTexture       *giu.Texture
+	trackTexture       imgui.TextureID
 	trackTextureWidth  float32
 	trackTextureHeight float32
 	mapGc              *cairo.Surface
@@ -120,9 +122,9 @@ func (t *trackMap) Draw(width int, height int) []giu.Widget {
 
 	t.redraw(width, height, cars)
 
-	if t.trackTexture != nil {
+	if t.trackTexture != 0 {
 		return []giu.Widget{
-			giu.Image(t.trackTexture).Size(t.trackTextureWidth, t.trackTextureHeight),
+			giu.Image(giu.ToTexture(t.trackTexture)).Size(t.trackTextureWidth, t.trackTextureHeight),
 		}
 	}
 
@@ -215,8 +217,11 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 			t.mapGc.Stroke()
 		}
 
-		giu.EnqueueNewTextureFromRgba(t.mapGc.GetImage(), func(texture *giu.Texture) {
-			t.trackTexture = texture
-		})
+		// Convert image to texture and release any previous texture
+		trueImg := t.mapGc.GetImage()
+		rgba := image.NewRGBA(trueImg.Bounds())
+		draw.Draw(rgba, trueImg.Bounds(), trueImg, image.Pt(0, 0), draw.Src)
+		giu.Context.GetRenderer().ReleaseImage(t.trackTexture)
+		t.trackTexture, _ = giu.Context.GetRenderer().LoadImage(rgba)
 	}
 }

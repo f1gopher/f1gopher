@@ -17,12 +17,15 @@ package panel
 
 import (
 	"github.com/AllenDang/giu"
+	"github.com/AllenDang/imgui-go"
 	"github.com/ungerik/go-cairo"
+	"image"
 	"image/color"
+	"image/draw"
 )
 
 type plot struct {
-	plotTexture       *giu.Texture
+	plotTexture       imgui.TextureID
 	plotTextureWidth  float32
 	plotTextureHeight float32
 
@@ -58,13 +61,15 @@ func (p *plot) reset() {
 		p.foregroundGc.Stroke()
 		p.foregroundGc.Flush()
 
-		img := p.foregroundGc.GetImage()
-		giu.EnqueueNewTextureFromRgba(img, func(texture *giu.Texture) {
-			p.plotTexture = texture
-		})
+		// Convert image to texture and release any previous texture
+		trueImg := p.foregroundGc.GetImage()
+		rgba := image.NewRGBA(trueImg.Bounds())
+		draw.Draw(rgba, trueImg.Bounds(), trueImg, image.Pt(0, 0), draw.Src)
+		giu.Context.GetRenderer().ReleaseImage(p.plotTexture)
+		p.plotTexture, _ = giu.Context.GetRenderer().LoadImage(rgba)
 
 		// Update image widget
-		p.widget = giu.Image(p.plotTexture).Size(p.plotTextureWidth, p.plotTextureHeight)
+		p.widget = giu.Image(giu.ToTexture(p.plotTexture)).Size(p.plotTextureWidth, p.plotTextureHeight)
 	}
 }
 
@@ -135,13 +140,16 @@ func (p *plot) redraw(width int, height int) {
 
 	// Copy image to display texture
 	p.foregroundGc.Flush()
-	img := p.foregroundGc.GetImage()
-	giu.EnqueueNewTextureFromRgba(img, func(texture *giu.Texture) {
-		p.plotTexture = texture
-	})
+
+	// Convert image to texture and release any previous texture
+	trueImg := p.foregroundGc.GetImage()
+	rgba := image.NewRGBA(trueImg.Bounds())
+	draw.Draw(rgba, trueImg.Bounds(), trueImg, image.Pt(0, 0), draw.Src)
+	giu.Context.GetRenderer().ReleaseImage(p.plotTexture)
+	p.plotTexture, _ = giu.Context.GetRenderer().LoadImage(rgba)
 
 	// Update image widget
-	p.widget = giu.Image(p.plotTexture).Size(p.plotTextureWidth, p.plotTextureHeight)
+	p.widget = giu.Image(giu.ToTexture(p.plotTexture)).Size(p.plotTextureWidth, p.plotTextureHeight)
 }
 
 func floatColor(color color.RGBA) (float64, float64, float64, float64) {
