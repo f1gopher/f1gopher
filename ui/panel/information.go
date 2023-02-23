@@ -138,11 +138,11 @@ func (i *information) infoWidgets() *giu.RowWidget {
 				giu.Label(i.event.SafetyCar.String())))
 
 		widgets = append(widgets,
-			giu.Label(fmt.Sprintf(", Lap: %d/%d, Remaining: %s",
-				i.event.CurrentLap,
-				i.event.TotalLaps,
-				remaining)))
+			giu.Label(fmt.Sprintf(", Lap: %d/%d", i.event.CurrentLap, i.event.TotalLaps)))
 	}
+
+	widgets = append(widgets,
+		giu.Label(fmt.Sprintf(", Remaining: %s", remaining)))
 
 	widgets = append(widgets, giu.Style().SetColor(giu.StyleColorText, trackStatusColor(i.event.TrackStatus)).To(
 		giu.Label("⚑")))
