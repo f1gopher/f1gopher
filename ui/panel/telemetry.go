@@ -59,7 +59,6 @@ type telemetry struct {
 	selectedDriver       int32
 	selectedDriverNumber int
 
-	// TODO - use circular buffer of fixed size?
 	rpm      *circularBuffer[int16]
 	speed    *circularBuffer[float32]
 	gear     *circularBuffer[byte]
@@ -106,7 +105,7 @@ func CreateTelemetry() Panel {
 			name:               "Brake",
 			enabled:            true,
 			maxValue:           100.0,
-			majorTickIncrement: 20.0,
+			majorTickIncrement: 30.0,
 			colorR:             1.0,
 			colorG:             0.0,
 			colorB:             0.0,
@@ -138,7 +137,7 @@ func CreateTelemetry() Panel {
 			name:               "Gear",
 			enabled:            true,
 			maxValue:           8.0,
-			majorTickIncrement: 1.0,
+			majorTickIncrement: 3.0,
 			colorR:             0.0,
 			colorG:             1.0,
 			colorB:             1.0,
@@ -149,7 +148,7 @@ func CreateTelemetry() Panel {
 			name:               "RPM",
 			enabled:            true,
 			maxValue:           16000.0,
-			majorTickIncrement: 3000.0,
+			majorTickIncrement: 5000.0,
 			colorR:             1.0,
 			colorG:             1.0,
 			colorB:             0.0,
@@ -160,7 +159,7 @@ func CreateTelemetry() Panel {
 			name:               "Speed",
 			enabled:            true,
 			maxValue:           380.0,
-			majorTickIncrement: 50.0,
+			majorTickIncrement: 90.0,
 			colorR:             0.0,
 			colorG:             1.0,
 			colorB:             0.0,
@@ -171,9 +170,9 @@ func CreateTelemetry() Panel {
 			name:               "Throttle",
 			enabled:            true,
 			maxValue:           100.0,
-			majorTickIncrement: 20.0,
+			majorTickIncrement: 30.0,
 			colorR:             0.0,
-			colorG:             0.0,
+			colorG:             0.33,
 			colorB:             1.0,
 			value:              func(x int) float64 { return float64(panel.throttle.get(x)) },
 			summaryValue:       func(x int) string { return fmt.Sprintf("%.0f%%", panel.throttle.get(x)) },
@@ -309,7 +308,7 @@ func (t *telemetry) drawBackground(dc *cairo.Surface) {
 
 	// Leave border all around the chart
 	margin := 10.0
-	t.yBottom = height - margin - 20
+	t.yBottom = height - margin - 10
 	yAxisLength := t.yBottom - margin
 
 	// Update top and bottom positions for each channel
@@ -334,11 +333,11 @@ func (t *telemetry) drawBackground(dc *cairo.Surface) {
 		if x == len(t.channels)-1 {
 			t.channels[x].bottom = t.yBottom
 		} else {
-			plotHeight := yAxisLength * (1.0 / enabledChannels)
+			plotHeight := (yAxisLength - (7 * enabledChannels)) * (1.0 / enabledChannels)
 			t.channels[x].bottom = (t.channels[x].top + plotHeight) - 1
 		}
 
-		top = t.channels[x].bottom + 1
+		top = t.channels[x].bottom + 7
 
 		t.channels[x].gap = (t.channels[x].bottom - t.channels[x].top) / t.channels[x].maxValue
 	}
@@ -357,7 +356,7 @@ func (t *telemetry) drawBackground(dc *cairo.Surface) {
 	dc.Stroke()
 
 	// X Axis line
-	dc.SetSourceRGB(0.0, 0.0, 1.0)
+	dc.SetSourceRGB(1.0, 1.0, 1.0)
 	dc.MoveTo(t.yAxisPos, t.yBottom)
 	dc.LineTo(t.endXPos, t.yBottom)
 	dc.Stroke()
@@ -396,7 +395,7 @@ func (t *telemetry) drawForeground(dc *cairo.Surface) {
 	startOffset := xPixelsPerSecond * endTime.Sub(t.currentTime).Seconds()
 
 	// Draw X axis marks and values
-	dc.SetSourceRGB(0.0, 0.0, 1.0)
+	dc.SetSourceRGB(1.0, 1.0, 1.0)
 	currentTime := startTime
 	xPos := t.yAxisPos + startOffset
 	for xPos < t.endXPos {
@@ -407,9 +406,9 @@ func (t *telemetry) drawForeground(dc *cairo.Surface) {
 		}
 
 		dc.MoveTo(xPos, t.yBottom)
-		dc.LineTo(xPos, t.yBottom+15.0)
+		dc.LineTo(xPos, t.yBottom+5.0)
 
-		dc.MoveTo(xPos-20, t.yBottom+25)
+		dc.MoveTo(xPos-20, t.yBottom+15)
 		dc.ShowText(currentTime.In(t.circuitTimezone).Format("15:04:05"))
 
 		xPos += xPixelsPerSecond

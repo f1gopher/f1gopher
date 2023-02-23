@@ -21,8 +21,8 @@ func drawYAxis(
 
 	valueXPos := xPos - 40
 	valueYOffset := 3.0
-	majorTickStartX := xPos - 10
-	minorTickStartX := xPos - 5
+	majorTickStartX := xPos - 8
+	minorTickStartX := xPos - 4
 
 	gapForMajorTick := pixelGapForOne * majorTickIncrement
 
@@ -31,7 +31,7 @@ func drawYAxis(
 	yPos := referenceYPos
 	for yPos > topY {
 		dc.MoveTo(valueXPos, yPos+valueYOffset)
-		dc.ShowText(fmt.Sprintf("%.0f", currentTickValue))
+		dc.ShowText(fmt.Sprintf("%5.0f", currentTickValue))
 
 		dc.MoveTo(majorTickStartX, yPos)
 		dc.LineTo(xPos, yPos)
@@ -45,7 +45,7 @@ func drawYAxis(
 	yPos = referenceYPos + gapForMajorTick
 	for yPos < bottomY {
 		dc.MoveTo(valueXPos, yPos+valueYOffset)
-		dc.ShowText(fmt.Sprintf("%.0f", currentTickValue))
+		dc.ShowText(fmt.Sprintf("%5.0f", currentTickValue))
 
 		dc.MoveTo(majorTickStartX, yPos)
 		dc.LineTo(xPos, yPos)

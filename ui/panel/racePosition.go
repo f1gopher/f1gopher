@@ -139,7 +139,7 @@ func (r *racePosition) drawBackground(dc *cairo.Surface) {
 	dc.Stroke()
 
 	// X & Y Axis lines
-	dc.SetSourceRGB(0.0, 0.0, 1.0)
+	dc.SetSourceRGB(1.0, 1.0, 1.0)
 	dc.MoveTo(r.yAxisPos, margin)
 	dc.LineTo(r.yAxisPos, height-margin)
 	dc.LineTo(width-margin, height-margin)

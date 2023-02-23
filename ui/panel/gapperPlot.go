@@ -291,7 +291,7 @@ func (g *gapperPlot) drawBackground(dc *cairo.Surface) {
 	dc.Stroke()
 
 	// X Axis line - at 0 for the Y value
-	dc.SetSourceRGB(0.0, 0.0, 1.0)
+	dc.SetSourceRGB(1.0, 1.0, 1.0)
 	g.yAxisPosForZero = margin + (g.yMax * g.yGap)
 	dc.MoveTo(g.yAxisPos, g.yAxisPosForZero)
 	dc.LineTo(width-margin, g.yAxisPosForZero)
