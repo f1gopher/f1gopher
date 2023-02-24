@@ -20,3 +20,4 @@
 /profile*.png
 /*.pprof
 go.work
+default.pgo
