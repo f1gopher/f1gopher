@@ -20,6 +20,7 @@ import (
 	"f1gopher/ui"
 	"flag"
 	"fmt"
+	_ "net/http/pprof"
 	"os"
 
 	"github.com/AllenDang/giu"
@@ -30,9 +31,10 @@ import (
 //go:embed "JetBrainsMono-Regular.ttf"
 var DefaultFont []byte
 
-func main() {
-	// defer profile.Start(profile.ProfilePath(".")).Stop()
+var Version string
+var BuildTime string
 
+func main() {
 	autoLivePtr := flag.Bool("autoLive", false, "If a live session is in progress display it on startup")
 	logPtr := flag.Bool("log", false, "Enable logging")
 	flag.Parse()
@@ -50,12 +52,12 @@ func main() {
 	defer logger.Sync() // flushes buffer, if any
 	sugar := logger.Sugar()
 
-	sugar.Infof("F1Gopher v%s", version)
+	sugar.Infof("F1Gopher v%s", Version)
 
 	giu.SetDefaultFontFromBytes(DefaultFont, 14.0)
 
 	wnd := giu.NewMasterWindow(
-		fmt.Sprintf("F1Gopher - v%s", version),
+		fmt.Sprintf("F1Gopher - v%s", Version),
 		1920,
 		1080,
 		0)
