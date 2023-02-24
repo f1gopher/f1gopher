@@ -327,16 +327,15 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 
 	if t.isRaceSession {
 		rowWidgets = append(rowWidgets, []giu.Widget{
+			giu.Label(""),
+			giu.Label(""),
+			giu.Label(""),
 			giu.Style().SetColor(giu.StyleColorText, colornames.Purple).To(giu.Label(fmt.Sprintf("%d", t.fastestSpeedTrap))),
-			giu.Label(""),
-			giu.Label(""),
-			giu.Label(""),
 		}...)
 	} else {
-		rowWidgets = append(rowWidgets, []giu.Widget{
-			giu.Label(""),
-			giu.Label(""),
-		}...)
+		rowWidgets = append(rowWidgets,
+			giu.Style().SetColor(giu.StyleColorText, colornames.Purple).To(giu.Label(fmt.Sprintf("%d", t.fastestSpeedTrap))),
+		)
 	}
 
 	rows = append(rows, giu.TableRow(rowWidgets...))
