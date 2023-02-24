@@ -111,7 +111,7 @@ func (d *dataView) draw(width int, height int) {
 	defer d.closeWg.Done()
 
 	var gap float32 = 5.0
-	var timingWidth float32 = 1355
+	var timingWidth float32 = 1415
 	var timingHeight float32 = 430
 	const weatherWidth float32 = 170
 	var trackMapWidth float32 = 500
