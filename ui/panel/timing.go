@@ -51,6 +51,11 @@ type timing struct {
 
 const timeWidth = 75
 
+var outBackground = color.RGBA{R: 69, G: 69, B: 228, A: 255}
+var dropZoneBackground = color.RGBA{R: 83, G: 84, B: 78, A: 255}
+var defaultBackgroundColor = color.RGBA{R: 0, G: 0, B: 0, A: 0}
+var altDefaultBackgroundColor = color.RGBA{R: 55, G: 55, B: 55, A: 255}
+
 func CreateTiming() Panel {
 	return &timing{
 		data: make(map[int]Messages.Timing),
@@ -276,7 +281,32 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 				giu.Label(drivers[x].Location.String())),
 		}...)
 
-		rows = append(rows, giu.TableRow(widgets...))
+		// For qualifying show which drivers are out or in the drop zone by changing the background color
+		backgroundColor := defaultBackgroundColor
+		if t.event.Type == Messages.Qualifying1 {
+			if drivers[x].Position > 15 {
+				backgroundColor = dropZoneBackground
+			}
+
+		} else if t.event.Type == Messages.Qualifying2 {
+			if drivers[x].Position > 15 {
+				backgroundColor = outBackground
+			} else if drivers[x].Position > 10 {
+				backgroundColor = dropZoneBackground
+			}
+
+		} else if t.event.Type == Messages.Qualifying3 {
+			if drivers[x].Position > 10 {
+				backgroundColor = outBackground
+			}
+		} else {
+			// When not a qualifying session alternate the row background color to make things more readable
+			if drivers[x].Position%2 == 0 {
+				backgroundColor = altDefaultBackgroundColor
+			}
+		}
+
+		rows = append(rows, giu.TableRow(widgets...).BgColor(backgroundColor))
 	}
 
 	// Track segments
@@ -316,10 +346,10 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 		giu.Style().SetStyleFloat(giu.StyleVarItemSpacing, 0).To(giu.Row(trackSegments...)),
 		giu.Label(""),
 		giu.Label("Session:"),
-		giu.Style().SetColor(giu.StyleColorText, colornames.Purple).To(giu.Label(fmtDuration(t.fastestSector1))),
-		giu.Style().SetColor(giu.StyleColorText, colornames.Purple).To(giu.Label(fmtDuration(t.fastestSector2))),
-		giu.Style().SetColor(giu.StyleColorText, colornames.Purple).To(giu.Label(fmtDuration(t.fastestSector3))),
-		giu.Style().SetColor(giu.StyleColorText, colornames.Purple).To(giu.Label(fmtDuration(t.theoreticalFastestLap))),
+		giu.Style().SetColor(giu.StyleColorText, purpleColor).To(giu.Label(fmtDuration(t.fastestSector1))),
+		giu.Style().SetColor(giu.StyleColorText, purpleColor).To(giu.Label(fmtDuration(t.fastestSector2))),
+		giu.Style().SetColor(giu.StyleColorText, purpleColor).To(giu.Label(fmtDuration(t.fastestSector3))),
+		giu.Style().SetColor(giu.StyleColorText, purpleColor).To(giu.Label(fmtDuration(t.theoreticalFastestLap))),
 		giu.Label(""),
 		giu.Label(""),
 		giu.Label(""),
@@ -330,11 +360,11 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 			giu.Label(""),
 			giu.Label(""),
 			giu.Label(""),
-			giu.Style().SetColor(giu.StyleColorText, colornames.Purple).To(giu.Label(fmt.Sprintf("%d", t.fastestSpeedTrap))),
+			giu.Style().SetColor(giu.StyleColorText, purpleColor).To(giu.Label(fmt.Sprintf("%d", t.fastestSpeedTrap))),
 		}...)
 	} else {
 		rowWidgets = append(rowWidgets,
-			giu.Style().SetColor(giu.StyleColorText, colornames.Purple).To(giu.Label(fmt.Sprintf("%d", t.fastestSpeedTrap))),
+			giu.Style().SetColor(giu.StyleColorText, purpleColor).To(giu.Label(fmt.Sprintf("%d", t.fastestSpeedTrap))),
 		)
 	}
 

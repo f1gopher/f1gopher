@@ -61,10 +61,12 @@ func fmtDuration(d time.Duration) string {
 	return fmt.Sprintf("%02d:%02d.%03d", minutes, seconds, milliseconds)
 }
 
+var purpleColor = color.RGBA{R: 213, G: 0, B: 213, A: 255}
+
 func timeColor(personalFastest bool, overallFastest bool) color.Color {
 
 	if overallFastest {
-		return colornames.Purple
+		return purpleColor
 	} else if personalFastest {
 		return colornames.Green
 	} else {
@@ -81,7 +83,7 @@ func segmentColor(segmentType Messages.SegmentType) color.Color {
 	case Messages.InvalidSegment:
 		return colornames.Black
 	case Messages.PurpleSegment:
-		return color.RGBA{R: 213, G: 0, B: 213, A: 255}
+		return purpleColor
 	case Messages.RedSegment:
 		return colornames.Red
 	case Messages.PitlaneSegment:
@@ -96,7 +98,7 @@ func segmentColor(segmentType Messages.SegmentType) color.Color {
 func fastestLapColor(overallFastest bool) color.Color {
 
 	if overallFastest {
-		return colornames.Purple
+		return purpleColor
 	} else {
 		// TODO - use default text color
 		return colornames.White
