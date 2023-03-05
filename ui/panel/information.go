@@ -141,11 +141,39 @@ func (i *information) infoWidgets() *giu.RowWidget {
 			giu.Label(fmt.Sprintf(", Lap: %d/%d", i.event.CurrentLap, i.event.TotalLaps)))
 	}
 
-	widgets = append(widgets,
-		giu.Label(fmt.Sprintf(", Remaining: %s", remaining)))
+	// If the session hasn't started then display a count down instead of the remaining time
+	if i.eventTime.Before(i.dataSrc.SessionStart()) {
+		widgets = append(widgets,
+			giu.Label(fmt.Sprintf(", Session Starts in: %s", fmtCountdown(i.dataSrc.SessionStart().Sub(i.eventTime)))))
+	} else {
+		widgets = append(widgets,
+			giu.Label(fmt.Sprintf(", Remaining: %s", remaining)))
+	}
 
 	widgets = append(widgets, giu.Style().SetColor(giu.StyleColorText, trackStatusColor(i.event.TrackStatus)).To(
 		giu.Label("⚑")))
 
 	return giu.Row(widgets...)
+}
+
+func fmtCountdown(d time.Duration) string {
+	milliseconds := d.Milliseconds()
+
+	if milliseconds == 0 {
+		return ""
+	}
+
+	minutes := milliseconds / (1000 * 60)
+	milliseconds -= minutes * 60 * 1000
+	seconds := milliseconds / 1000
+	milliseconds -= seconds * 1000
+
+	if minutes < 0 {
+		minutes = -minutes
+	}
+	if seconds < 0 {
+		seconds = -seconds
+	}
+
+	return fmt.Sprintf("%02d:%02d", minutes, seconds)
 }
