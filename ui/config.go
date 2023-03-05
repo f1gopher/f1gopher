@@ -83,3 +83,7 @@ func (c *config) getLocalIP() []string {
 func (c *config) PredictedPitstopTime() time.Duration {
 	return c.predictionPitstopTime
 }
+
+func (c *config) SetPredictedPitstopTime(value time.Duration) {
+	c.predictionPitstopTime = value
+}

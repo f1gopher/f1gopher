@@ -6,4 +6,5 @@ import (
 
 type PanelConfig interface {
 	PredictedPitstopTime() time.Duration
+	SetPredictedPitstopTime(value time.Duration)
 }

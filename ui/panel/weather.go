@@ -34,7 +34,7 @@ type weather struct {
 
 	isRaceSession bool
 	pitlaneTime   time.Duration
-	pitstopTime   time.Duration
+	config        PanelConfig
 }
 
 func CreateWeather() Panel {
@@ -49,7 +49,7 @@ func (w *weather) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	w.data = Messages.Weather{}
 	w.isRaceSession = dataSrc.Session() == Messages.RaceSession || dataSrc.Session() == Messages.SprintSession
 	w.pitlaneTime = dataSrc.TimeLostInPitlane()
-	w.pitstopTime = config.PredictedPitstopTime()
+	w.config = config
 }
 
 func (w *weather) ProcessDrivers(data Messages.Drivers)                        {}
@@ -100,8 +100,19 @@ func (w *weather) widgets() []giu.Widget {
 	if w.isRaceSession {
 		widgets = append(widgets, giu.Dummy(10, 60))
 		widgets = append(widgets, giu.Labelf("Pitlane Time: %s", w.pitlaneTime.String()))
-		widgets = append(widgets, giu.Labelf("Pitstop Time: %s", w.pitstopTime.String()))
-		widgets = append(widgets, giu.Labelf("Total Time: %s", (w.pitlaneTime+w.pitstopTime).String()))
+		widgets = append(widgets, giu.Labelf("Pitstop Time: %s", w.config.PredictedPitstopTime().String()))
+		widgets = append(widgets, giu.Labelf("Total Time: %s", (w.pitlaneTime+w.config.PredictedPitstopTime()).String()))
+
+		widgets = append(widgets, giu.Row(
+			giu.ArrowButton(giu.DirectionLeft).OnClick(func() {
+				w.config.SetPredictedPitstopTime(w.config.PredictedPitstopTime() - (time.Millisecond * 100))
+				w.dataChanged.Store(true)
+			}),
+			giu.Label("Pitstop Time"),
+			giu.ArrowButton(giu.DirectionRight).OnClick(func() {
+				w.config.SetPredictedPitstopTime(w.config.PredictedPitstopTime() + (time.Millisecond * 100))
+				w.dataChanged.Store(true)
+			})))
 	}
 
 	w.dataLock.Unlock()
