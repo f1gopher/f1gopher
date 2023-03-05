@@ -93,8 +93,6 @@ func (r *raceControlMessages) formatMessages() []giu.Widget {
 			color := colornames.White
 
 			switch r.rcMessages[x].Flag {
-			case Messages.ChequeredFlag:
-				prefix = "🏁 "
 			case Messages.GreenFlag:
 				color = colornames.Green
 				if strings.HasPrefix(r.rcMessages[x].Msg, "GREEN LIGHT") {
