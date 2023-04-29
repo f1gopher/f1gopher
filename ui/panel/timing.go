@@ -44,6 +44,7 @@ type timing struct {
 
 	gapToInfront         bool
 	isRaceSession        bool
+	isSprintRaceSession  bool
 	predictedPitstopTime time.Duration
 
 	table *giu.TableWidget
@@ -85,7 +86,8 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	t.previousSessionActive = Messages.UnknownState
 	t.fastestSpeedTrap = 0
 	t.timeLostInPitlane = dataSrc.TimeLostInPitlane()
-	t.isRaceSession = dataSrc.Session() == Messages.RaceSession || dataSrc.Session() == Messages.SprintSession
+	t.isRaceSession = dataSrc.Session() == Messages.RaceSession
+	t.isSprintRaceSession = dataSrc.Session() == Messages.SprintSession
 	t.predictedPitstopTime = config.PredictedPitstopTime()
 
 	t.table = giu.Table().FastMode(true).Flags(giu.TableFlagsResizable | giu.TableFlagsSizingFixedSame)
@@ -109,6 +111,11 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 			giu.TableColumn("Pitstops").InnerWidthOrWeight(60),
 			giu.TableColumn("Pit Time").InnerWidthOrWeight(timeWidth),
 			giu.TableColumn("Post Pit Pos").InnerWidthOrWeight(100),
+		}...)
+	} else if t.isSprintRaceSession {
+		columns = append(columns, []*giu.TableColumnWidget{
+			giu.TableColumn("Pitstops").InnerWidthOrWeight(60),
+			giu.TableColumn("Pit Time").InnerWidthOrWeight(timeWidth),
 		}...)
 	}
 
@@ -272,6 +279,11 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 				giu.Style().SetColor(giu.StyleColorText, positionColor).To(
 					giu.Label(potentialPositionChange)),
 			}...)
+		} else if t.isSprintRaceSession {
+			widgets = append(widgets, []giu.Widget{
+				giu.Label(fmt.Sprintf("%d", drivers[x].Pitstops)),
+				giu.Label(lastPitlaneTime),
+			}...)
 		}
 
 		widgets = append(widgets, []giu.Widget{
@@ -355,7 +367,7 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 		giu.Label(""),
 	}
 
-	if t.isRaceSession {
+	if t.isRaceSession || t.isSprintRaceSession {
 		rowWidgets = append(rowWidgets, []giu.Widget{
 			giu.Label(""),
 			giu.Label(""),
