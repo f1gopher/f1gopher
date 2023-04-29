@@ -48,6 +48,7 @@ type dataScreen interface {
 
 	init(dataSrc f1gopherlib.F1GopherLib, config config)
 	close()
+	toggleTelemetryView()
 }
 
 type Manager struct {
@@ -131,6 +132,12 @@ func Create(logger *zap.SugaredLogger, wnd *giu.MasterWindow, config config, aut
 	if autoLive && main.liveSession != nil {
 		manager.view = Live
 	}
+
+	manager.wnd.RegisterKeyboardShortcuts(giu.WindowShortcut{Key: giu.KeyT, Callback: func() {
+		manager.live.toggleTelemetryView()
+		manager.replay.toggleTelemetryView()
+		manager.debugReplay.toggleTelemetryView()
+	}})
 
 	return &manager
 }

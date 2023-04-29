@@ -38,6 +38,8 @@ type dataView struct {
 	event     Messages.Event
 	eventLock sync.Mutex
 	closeWg   sync.WaitGroup
+
+	showTelemetry bool
 }
 
 func createDataView(webView panel.Panel, changeView func(newView screen, info any), isLiveSession bool) dataScreen {
@@ -62,6 +64,10 @@ func createDataView(webView panel.Panel, changeView func(newView screen, info an
 	view.addPanel(webView)
 
 	return &view
+}
+
+func (d *dataView) toggleTelemetryView() {
+	d.showTelemetry = !d.showTelemetry
 }
 
 func (d *dataView) addPanel(panel panel.Panel) {
@@ -168,17 +174,15 @@ func (d *dataView) draw(width int, height int) {
 	}
 
 	// ROW 2
-	//w = giu.Window(panel.Telemetry.String()).
-	//	Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
-	//	Pos(0, row2StartY).
-	//	Size(telemetryWidth, row2Height)
-	//w.Layout(d.panels[panel.Telemetry].Draw(int(telemetryWidth), int(row2Height))...)
-
-	w = giu.Window(panel.Catching.String()).
+	selectablePanel := panel.Telemetry
+	if !d.showTelemetry {
+		selectablePanel = panel.Catching
+	}
+	w = giu.Window(selectablePanel.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 		Pos(0, row2StartY).
 		Size(telemetryWidth, row2Height)
-	w.Layout(d.panels[panel.Catching].Draw(int(telemetryWidth), int(row2Height))...)
+	w.Layout(d.panels[selectablePanel].Draw(int(telemetryWidth), int(row2Height))...)
 
 	w = giu.Window(panel.Weather.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
