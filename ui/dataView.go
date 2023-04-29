@@ -57,6 +57,7 @@ func createDataView(webView panel.Panel, changeView func(newView screen, info an
 	// TODO - only create these for race session so that we don't have them processing data even when not displayed
 	view.addPanel(panel.CreateRacePosition())
 	view.addPanel(panel.CreateGapperPlot())
+	view.addPanel(panel.CreateCatching())
 
 	view.addPanel(webView)
 
@@ -167,11 +168,17 @@ func (d *dataView) draw(width int, height int) {
 	}
 
 	// ROW 2
-	w = giu.Window(panel.Telemetry.String()).
+	//w = giu.Window(panel.Telemetry.String()).
+	//	Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+	//	Pos(0, row2StartY).
+	//	Size(telemetryWidth, row2Height)
+	//w.Layout(d.panels[panel.Telemetry].Draw(int(telemetryWidth), int(row2Height))...)
+
+	w = giu.Window(panel.Catching.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
 		Pos(0, row2StartY).
 		Size(telemetryWidth, row2Height)
-	w.Layout(d.panels[panel.Telemetry].Draw(int(telemetryWidth), int(row2Height))...)
+	w.Layout(d.panels[panel.Catching].Draw(int(telemetryWidth), int(row2Height))...)
 
 	w = giu.Window(panel.Weather.String()).
 		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).

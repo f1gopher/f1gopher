@@ -34,6 +34,7 @@ const (
 	RacePosition
 	GapperPlot
 	Telemetry
+	Catching
 )
 
 func (t Type) String() string {
@@ -47,7 +48,8 @@ func (t Type) String() string {
 		"WebTiming",
 		"RacePosition",
 		"GapperPlot",
-		"Telemetry"}[t]
+		"Telemetry",
+		"Catching"}[t]
 }
 
 type Panel interface {
