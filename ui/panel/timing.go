@@ -94,7 +94,7 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	columns := []*giu.TableColumnWidget{
 		giu.TableColumn("Pos").InnerWidthOrWeight(25),
 		giu.TableColumn("Driver").InnerWidthOrWeight(41),
-		giu.TableColumn("Segment").InnerWidthOrWeight(260),
+		giu.TableColumn("Segment").InnerWidthOrWeight(290),
 		giu.TableColumn("Fastest").InnerWidthOrWeight(timeWidth),
 		giu.TableColumn("Gap").InnerWidthOrWeight(timeWidth),
 		giu.TableColumn("S1").InnerWidthOrWeight(timeWidth),
@@ -108,7 +108,7 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 
 	if t.isRaceSession {
 		columns = append(columns, []*giu.TableColumnWidget{
-			giu.TableColumn("Pitstops").InnerWidthOrWeight(60),
+			giu.TableColumn("Pits").InnerWidthOrWeight(30),
 			giu.TableColumn("Pit Time").InnerWidthOrWeight(timeWidth),
 			giu.TableColumn("Post Pit Pos").InnerWidthOrWeight(100),
 		}...)

@@ -151,7 +151,7 @@ func (i *information) infoWidgets() *giu.RowWidget {
 	}
 
 	widgets = append(widgets, giu.Style().SetColor(giu.StyleColorText, trackStatusColor(i.event.TrackStatus)).To(
-		giu.Label("⚑")))
+		giu.Label(flagCharacter())))
 
 	return giu.Row(widgets...)
 }

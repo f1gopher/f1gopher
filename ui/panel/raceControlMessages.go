@@ -22,10 +22,21 @@ import (
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
 	"golang.org/x/image/colornames"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
 )
+
+func flagCharacter() string {
+	// Not been able to get the unicode flag character to work on Linux
+	switch runtime.GOOS {
+	case "linux":
+		return "▛"
+	default:
+		return "⚑"
+	}
+}
 
 type raceControlMessages struct {
 	dataSrc        f1gopherlib.F1GopherLib
@@ -98,27 +109,27 @@ func (r *raceControlMessages) formatMessages() []giu.Widget {
 				if strings.HasPrefix(r.rcMessages[x].Msg, "GREEN LIGHT") {
 					prefix = "● "
 				} else {
-					prefix = "⚑ "
+					prefix = flagCharacter() + " "
 				}
 			case Messages.YellowFlag:
 				color = colornames.Yellow
-				prefix = "⚑ "
+				prefix = flagCharacter() + " "
 			case Messages.DoubleYellowFlag:
 				color = colornames.Yellow
-				prefix = "⚑⚑ "
+				prefix = flagCharacter() + flagCharacter() + " "
 			case Messages.BlueFlag:
 				color = colornames.Blue
-				prefix = "⚑ "
+				prefix = flagCharacter() + " "
 			case Messages.RedFlag:
 				color = colornames.Red
 				if strings.HasPrefix(r.rcMessages[x].Msg, "RED LIGHT") {
 					prefix = "● "
 				} else {
-					prefix = "⚑ "
+					prefix = flagCharacter() + " "
 				}
 			case Messages.BlackAndWhite:
 				color = colornames.White
-				prefix = "⚑⚑"
+				prefix = flagCharacter() + flagCharacter()
 			}
 
 			if len(prefix) != 0 {
