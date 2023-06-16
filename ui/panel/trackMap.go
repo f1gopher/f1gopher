@@ -201,10 +201,10 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 
 			// TODO - hacks to make canada work
 			// Up down
-			x += 335
+			x += (6264 / scaling) //335
 
 			// Left right
-			y -= 95
+			y -= (1776 / scaling) //95
 
 			driverInfo, exists := t.driverData[car.DriverNumber]
 			driverColor := colornames.White
