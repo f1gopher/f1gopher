@@ -42,10 +42,13 @@ type timing struct {
 	fastestSpeedTrap      int
 	timeLostInPitlane     time.Duration
 
-	gapToInfront         bool
-	isRaceSession        bool
-	isSprintRaceSession  bool
-	predictedPitstopTime time.Duration
+	gapToInfront        bool
+	isRaceSession       bool
+	isSprintRaceSession bool
+	config              PanelConfig
+
+	lastPitLossColor map[int]color.RGBA
+	lastPitLossValue map[int]string
 
 	table *giu.TableWidget
 }
@@ -59,7 +62,9 @@ var altDefaultBackgroundColor = color.RGBA{R: 55, G: 55, B: 55, A: 255}
 
 func CreateTiming() Panel {
 	return &timing{
-		data: make(map[int]Messages.Timing),
+		data:             make(map[int]Messages.Timing),
+		lastPitLossColor: make(map[int]color.RGBA),
+		lastPitLossValue: make(map[int]string),
 	}
 }
 
@@ -79,6 +84,8 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 
 	// Clear any previous session data
 	t.data = make(map[int]Messages.Timing)
+	t.lastPitLossColor = make(map[int]color.RGBA)
+	t.lastPitLossValue = make(map[int]string)
 	t.fastestSector1 = 0
 	t.fastestSector2 = 0
 	t.fastestSector3 = 0
@@ -88,7 +95,7 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	t.timeLostInPitlane = dataSrc.TimeLostInPitlane()
 	t.isRaceSession = dataSrc.Session() == Messages.RaceSession
 	t.isSprintRaceSession = dataSrc.Session() == Messages.SprintSession
-	t.predictedPitstopTime = config.PredictedPitstopTime()
+	t.config = config
 
 	t.table = giu.Table().FastMode(true).Flags(giu.TableFlagsResizable | giu.TableFlagsSizingFixedSame)
 	columns := []*giu.TableColumnWidget{
@@ -142,6 +149,7 @@ func (t *timing) ProcessEvent(data Messages.Event) {
 func (t *timing) Draw(width int, height int) []giu.Widget {
 
 	drivers := t.orderedDrivers()
+	predictedPitstopTime := t.config.PredictedPitstopTime()
 
 	t.updateSessionStats(drivers)
 
@@ -229,48 +237,73 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 		}
 
 		if t.isRaceSession {
-			newPosition := drivers[x].Position
-			positionColor := colornames.Green
-			pitTimeLost := t.timeLostInPitlane + t.predictedPitstopTime
-			// Default value for the last car because we won't enter the loop
-			var timeToCarAhead = pitTimeLost
-			var timeToCarBehind time.Duration
-			for driverBehind := x + 1; driverBehind < len(drivers); driverBehind++ {
-				timeToCarAhead = pitTimeLost
-
-				// Can't drop below stopped cars
-				if drivers[driverBehind].Location == Messages.Stopped ||
-					drivers[driverBehind].Location == Messages.OutOfRace {
-					break
-				}
-
-				if drivers[driverBehind].TimeDiffToPositionAhead-pitTimeLost >= 0 {
-					timeToCarBehind = drivers[driverBehind].TimeDiffToPositionAhead - timeToCarAhead
-					break
-				}
-
-				pitTimeLost = pitTimeLost - drivers[driverBehind].TimeDiffToPositionAhead
-
-				newPosition++
-			}
-
-			if newPosition == drivers[x].Position {
-				timeToCarAhead += drivers[x].TimeDiffToPositionAhead
-			}
-
 			var potentialPositionChange string
-			if drivers[x].Location != Messages.Stopped && drivers[x].Location != Messages.OutOfRace {
-				if newPosition == 1 {
-					potentialPositionChange = fmt.Sprintf("%02d>%s", newPosition, t.fmtGapDuration(timeToCarBehind))
-				} else if timeToCarBehind == 0 {
-					potentialPositionChange = fmt.Sprintf("%s<%02d", t.fmtGapDuration(timeToCarAhead), newPosition)
-				} else {
-					potentialPositionChange = fmt.Sprintf("%s<%02d>%s", t.fmtGapDuration(timeToCarAhead), newPosition, t.fmtGapDuration(timeToCarBehind))
-				}
-			}
+			positionColor := colornames.Green
 
-			if newPosition != drivers[x].Position {
-				positionColor = colornames.Red
+			if drivers[x].Location != Messages.Pitlane && drivers[x].Location != Messages.PitOut {
+				newPosition := drivers[x].Position
+				pitTimeLost := t.timeLostInPitlane + predictedPitstopTime
+				// Default value for the last car because we won't enter the loop
+				var timeToCarAhead = pitTimeLost
+				var timeToCarBehind time.Duration
+
+				timeToClearPitlane := time.Second * 10
+				gapToCar := time.Second * 0
+				minGap := (pitTimeLost - timeToClearPitlane)
+
+				for driverBehind := x + 1; driverBehind < len(drivers); driverBehind++ {
+					//timeToCarAhead = pitTimeLost
+
+					// Can't drop below stopped cars
+					if drivers[driverBehind].Location == Messages.Stopped ||
+						drivers[driverBehind].Location == Messages.OutOfRace {
+						break
+					}
+
+					newPosition++
+
+					gapToCar += drivers[driverBehind].TimeDiffToPositionAhead
+
+					// If the gap to the prediction car is less than the time to drive past the pitlane then keep looking
+					if gapToCar < minGap {
+						continue
+					}
+
+					//if drivers[driverBehind].TimeDiffToPositionAhead-pitTimeLost >= 0 {
+					//	timeToCarBehind = drivers[driverBehind].TimeDiffToPositionAhead - timeToCarAhead
+					//	break
+					//}
+					//
+					//pitTimeLost = pitTimeLost - drivers[driverBehind].TimeDiffToPositionAhead
+
+					timeToCarBehind = gapToCar - minGap
+					timeToCarAhead = drivers[driverBehind].TimeDiffToPositionAhead - timeToCarBehind
+					break
+				}
+
+				if newPosition == drivers[x].Position {
+					timeToCarAhead += drivers[x].TimeDiffToPositionAhead
+				}
+
+				if drivers[x].Location != Messages.Stopped && drivers[x].Location != Messages.OutOfRace {
+					if newPosition == 1 {
+						potentialPositionChange = fmt.Sprintf("%02d>%s", newPosition, t.fmtGapDuration(timeToCarBehind))
+					} else if timeToCarBehind == 0 {
+						potentialPositionChange = fmt.Sprintf("%s<%02d", t.fmtGapDuration(timeToCarAhead), newPosition)
+					} else {
+						potentialPositionChange = fmt.Sprintf("%s<%02d>%s", t.fmtGapDuration(timeToCarAhead), newPosition, t.fmtGapDuration(timeToCarBehind))
+					}
+				}
+
+				if newPosition != drivers[x].Position {
+					positionColor = colornames.Red
+				}
+
+				t.lastPitLossColor[drivers[x].Number] = positionColor
+				t.lastPitLossValue[drivers[x].Number] = potentialPositionChange
+			} else {
+				positionColor = t.lastPitLossColor[drivers[x].Number]
+				potentialPositionChange = t.lastPitLossValue[drivers[x].Number]
 			}
 
 			widgets = append(widgets, []giu.Widget{
