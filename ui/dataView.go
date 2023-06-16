@@ -40,6 +40,8 @@ type dataView struct {
 	closeWg   sync.WaitGroup
 
 	showTelemetry bool
+
+	layoutFunc func(width int, height int)
 }
 
 func createDataView(webView panel.Panel, changeView func(newView screen, info any), isLiveSession bool) dataScreen {
@@ -47,6 +49,8 @@ func createDataView(webView panel.Panel, changeView func(newView screen, info an
 		changeView: changeView,
 		panels:     map[panel.Type]panel.Panel{},
 	}
+
+	view.layoutFunc = view.newLayout
 
 	view.addPanel(panel.CreateInformation(func() { changeView(MainMenu, nil) }, isLiveSession))
 	view.addPanel(panel.CreateTiming())
@@ -110,6 +114,10 @@ func (d *dataView) close() {
 }
 
 func (d *dataView) draw(width int, height int) {
+	d.layoutFunc(width, height)
+}
+
+func (d *dataView) oldLayout(width int, height int) {
 	if d.closing {
 		return
 	}
@@ -215,6 +223,75 @@ func (d *dataView) draw(width int, height int) {
 			Size(float32(width)-pacePosY, float32(row3Height))
 		w.Layout(d.panels[panel.RacePosition].Draw(width-int(pacePosY), row3Height)...)
 	}
+}
+
+func (d *dataView) newLayout(width int, height int) {
+	if d.closing {
+		return
+	}
+
+	d.closeWg.Add(1)
+	defer d.closeWg.Done()
+
+	var gap float32 = 5.0
+	var timingWidth float32 = 1415
+	var timingHeight float32 = 430
+	const weatherWidth float32 = 170
+	var trackMapWidth float32 = 1000
+	var rcmWidth float32 = float32(width) - (timingWidth + gap)
+
+	// For none race session we don't display some panels
+	if d.dataSrc.Session() != Messages.RaceSession && d.dataSrc.Session() != Messages.SprintSession {
+		timingWidth = float32(width)
+		trackMapWidth = (float32(width) - gap) / 2.0
+		rcmWidth = trackMapWidth
+	}
+
+	// CONTROLS
+
+	w := giu.Window(panel.Info.String()).
+		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+		Pos(0, 0)
+	w.Layout(d.panels[panel.Info].Draw(0, 0)...)
+
+	infoWidth, panelHeight := w.CurrentSize()
+
+	w = giu.Window(panel.TeamRadio.String()).
+		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+		Pos(infoWidth+gap, 0)
+	w.Layout(d.panels[panel.TeamRadio].Draw(0, 0)...)
+
+	row1StartY := panelHeight + gap
+
+	row2StartY := row1StartY + timingHeight + gap
+	row2Height := float32(height) - row2StartY
+
+	// ROW 1
+	w = giu.Window(panel.Timing.String()).
+		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+		Pos(0, row1StartY).
+		Size(timingWidth, timingHeight)
+	w.Layout(d.panels[panel.Timing].Draw(0, 0)...)
+
+	w = giu.Window(panel.RaceControlMessages.String()).
+		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove|giu.WindowFlagsAlwaysHorizontalScrollbar|giu.WindowFlagsAlwaysVerticalScrollbar).
+		Pos(timingWidth+gap, row1StartY).
+		Size(rcmWidth, timingHeight)
+	w.Layout(d.panels[panel.RaceControlMessages].Draw(0, 0)...)
+
+	telemetryWidth := float32(width) - gap - weatherWidth
+
+	w = giu.Window(panel.TrackMap.String()).
+		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+		Pos(0, row2StartY).
+		Size(trackMapWidth, row2Height)
+	w.Layout(d.panels[panel.TrackMap].Draw(int(trackMapWidth), int(float32(height)-row2StartY))...)
+
+	w = giu.Window(panel.Catching.String()).
+		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+		Pos(trackMapWidth+gap, row2StartY).
+		Size(telemetryWidth, row2Height)
+	w.Layout(d.panels[panel.Catching].Draw(int(telemetryWidth), int(row2Height))...)
 }
 
 func (d *dataView) processData() {
