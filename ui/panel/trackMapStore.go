@@ -53,12 +53,13 @@ type trackMapStore struct {
 	recordingLap int
 	targetDriver int
 
-	locations    []Messages.Location
-	trackStart   time.Time
-	trackEnd     time.Time
-	pitlaneStart time.Time
-	pitlaneEnd   time.Time
-	prevLocation Messages.CarLocation
+	locations       []Messages.Location
+	trackStart      time.Time
+	trackEnd        time.Time
+	pitlaneStartLap int
+	pitlaneStart    time.Time
+	pitlaneEnd      time.Time
+	prevLocation    Messages.CarLocation
 
 	backgroundColor color.RGBA
 	currentWidth    int
@@ -150,46 +151,13 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 		const border = 50
 
 		// Pick the best scaling option to fill the display
-		var a, b float64
-		// If we rotate width and height are swapped
-		if t.currentTrack.name != "Bahrain International Circuit" {
-			a = xRange / float64(width-border)
-			b = yRange / float64(height-border)
+		a := xRange / float64(width-border)
+		b := yRange / float64(height-border)
 
-			if a > b {
-				t.currentTrack.scaling = a
-			} else {
-				t.currentTrack.scaling = b
-			}
-
-			// X
-			mapCentreOffsetX := int(float64(t.currentTrack.maxX) / t.currentTrack.scaling)
-			mapMarginX := int((float64(width) - (xRange / t.currentTrack.scaling)) / 2)
-			t.currentTrack.xOffset = mapCentreOffsetX + mapMarginX
-
-			// Y
-			mapCentreOffsetY := int(float64(t.currentTrack.maxY) / t.currentTrack.scaling)
-			mapMarginY := int((float64(height) - (yRange / t.currentTrack.scaling)) / 2)
-			t.currentTrack.yOffset = height - (mapCentreOffsetY + mapMarginY)
+		if a > b {
+			t.currentTrack.scaling = a
 		} else {
-			a = yRange / float64(width-border)
-			b = xRange / float64(height-border)
-
-			if a > b {
-				t.currentTrack.scaling = a
-			} else {
-				t.currentTrack.scaling = b
-			}
-
-			// X
-			mapCentreOffsetX := int(float64(t.currentTrack.maxY) / t.currentTrack.scaling)
-			mapMarginX := int((float64(width) - (yRange / t.currentTrack.scaling)) / 2)
-			t.currentTrack.xOffset = mapCentreOffsetX + mapMarginX
-
-			// Y
-			mapCentreOffsetY := int(float64(t.currentTrack.maxX) / t.currentTrack.scaling)
-			mapMarginY := int((float64(height) - (xRange / t.currentTrack.scaling)) / 2)
-			t.currentTrack.yOffset = (height - (mapCentreOffsetY + mapMarginY)) * 2
+			t.currentTrack.scaling = b
 		}
 
 		if t.gc != nil {
@@ -204,15 +172,10 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 		t.gc.Rectangle(0, 0, float64(t.gc.GetWidth()), float64(t.gc.GetHeight()))
 		t.gc.Fill()
 
-		t.gc.SetSourceRGBA(
-			1,
-			0,
-			0,
-			1)
+		t.gc.SetSourceRGBA(1, 0, 0, 1)
 
 		// Rotate around the centre of the track
 		t.gc.Translate(float64(width)/2, float64(height)/2)
-		t.gc.Rotate(t.currentTrack.rotation)
 
 		// Center marker
 		//t.gc.NewPath()
@@ -222,8 +185,6 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 		//t.gc.LineTo(0, 100)
 		//t.gc.Stroke()
 
-		t.gc.Translate(-float64(width)/2, -float64(height)/2)
-
 		// Pitlane
 		color := colornames.Yellow
 		t.gc.SetSourceRGBA(float64(color.R)/255.0, float64(color.G)/255.0, float64(color.B)/255.0, 1.0)
@@ -231,11 +192,8 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 		first := true
 
 		for loc := range t.currentTrack.pitlane {
-			xPoint := float64(t.currentTrack.pitlane[loc].X)
-			xPoint = float64(width) - xPoint
-
-			x := (xPoint / t.currentTrack.scaling) + float64(t.currentTrack.xOffset)
-			y := (float64(t.currentTrack.pitlane[loc].Y) / t.currentTrack.scaling) + float64(t.currentTrack.yOffset)
+			x := float64(t.currentTrack.pitlane[loc].X) / t.currentTrack.scaling
+			y := float64(t.currentTrack.pitlane[loc].Y) / t.currentTrack.scaling
 
 			if first {
 				t.gc.MoveTo(x, y)
@@ -254,11 +212,8 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 		first = true
 
 		for loc := range t.currentTrack.outline {
-			xPoint := float64(t.currentTrack.outline[loc].X)
-			xPoint = float64(width) - xPoint
-
-			x := (xPoint / t.currentTrack.scaling) + float64(t.currentTrack.xOffset)
-			y := (float64(t.currentTrack.outline[loc].Y) / t.currentTrack.scaling) + float64(t.currentTrack.yOffset)
+			x := float64(t.currentTrack.outline[loc].X) / t.currentTrack.scaling
+			y := float64(t.currentTrack.outline[loc].Y) / t.currentTrack.scaling
 
 			if first {
 				t.gc.MoveTo(x, y)
@@ -309,6 +264,10 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 
 	if data.Number == t.targetDriver {
 
+		if data.Location == Messages.OutLap {
+			t.targetDriver = data.Number
+		}
+
 		if t.trackStart.IsZero() && data.Location == Messages.OnTrack && data.Lap != 1 &&
 			data.Sector1 != 0 && data.Sector2 != 0 && data.Sector3 != 0 {
 
@@ -337,12 +296,17 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 
 		if t.pitlaneStart.IsZero() && data.Location == Messages.Pitlane &&
 			(t.prevLocation == Messages.OnTrack || t.prevLocation == Messages.OutLap) {
-
 			t.pitlaneStart = data.Timestamp
+			t.pitlaneStartLap = data.Lap
 		}
 
 		if !t.pitlaneStart.IsZero() && t.pitlaneEnd.IsZero() && data.Location == Messages.OutLap {
-			t.pitlaneEnd = data.Timestamp
+			// Sometimes the outlap doesn't happen so ignore that and try again
+			if data.Lap != t.pitlaneStartLap+1 {
+				t.pitlaneStart = time.Time{}
+			} else {
+				t.pitlaneEnd = data.Timestamp
+			}
 		}
 
 		if t.prevLocation != data.Location {
@@ -360,8 +324,9 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 					continue
 				}
 
-				// Always include the first and last and then every third location
-				if x%3 == 0 || x == 0 || x == len(t.locations)-1 {
+				// Always include the first and last and then every second location
+				if x%2 == 0 || x == 0 || x == len(t.locations)-1 {
+
 					t.currentTrack.outline = append(t.currentTrack.outline, image.Pt(int(location.X), int(location.Y)))
 				}
 
@@ -370,24 +335,82 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 				}
 			}
 
+			// Calc x and y ranges
 			t.currentTrack.minX = math.MaxInt
 			t.currentTrack.maxX = math.MinInt
 			t.currentTrack.minY = math.MaxInt
 			t.currentTrack.maxY = math.MinInt
 
 			for x := range t.currentTrack.outline {
-				if t.currentTrack.outline[x].X < t.currentTrack.minX {
-					t.currentTrack.minX = t.currentTrack.outline[x].X
+				xLoc := t.currentTrack.outline[x].X
+				yLoc := t.currentTrack.outline[x].Y
+
+				if xLoc < t.currentTrack.minX {
+					t.currentTrack.minX = xLoc
 				}
-				if t.currentTrack.outline[x].X > t.currentTrack.maxX {
-					t.currentTrack.maxX = t.currentTrack.outline[x].X
+				if xLoc > t.currentTrack.maxX {
+					t.currentTrack.maxX = xLoc
 				}
 
-				if t.currentTrack.outline[x].Y < t.currentTrack.minY {
-					t.currentTrack.minY = t.currentTrack.outline[x].Y
+				if yLoc < t.currentTrack.minY {
+					t.currentTrack.minY = yLoc
 				}
-				if t.currentTrack.outline[x].Y > t.currentTrack.maxY {
-					t.currentTrack.maxY = t.currentTrack.outline[x].Y
+				if yLoc > t.currentTrack.maxY {
+					t.currentTrack.maxY = yLoc
+				}
+			}
+
+			// TODO - need to handle when max is < 0??
+			xRange := math.Abs(float64(t.currentTrack.maxX - t.currentTrack.minX))
+			t.currentTrack.xOffset = t.currentTrack.maxX - int(xRange/2)
+
+			yRange := math.Abs(float64(t.currentTrack.maxY - t.currentTrack.minY))
+			t.currentTrack.yOffset = t.currentTrack.maxY - int(yRange/2)
+
+			tmp := make([]image.Point, 0)
+
+			// Translate values to be centered on 0, 0
+			for x := range t.currentTrack.outline {
+				xVal := -(t.currentTrack.outline[x].X - t.currentTrack.xOffset)
+				yVal := t.currentTrack.outline[x].Y - t.currentTrack.yOffset
+				tmp = append(tmp, image.Pt(xVal, yVal))
+			}
+
+			// Rotate values
+			t.currentTrack.outline = make([]image.Point, 0)
+			for x := range tmp {
+
+				s := math.Sin(t.currentTrack.rotation)
+				c := math.Cos(t.currentTrack.rotation)
+
+				xLoc := int(float64(tmp[x].X)*c - float64(tmp[x].Y)*s)
+				yLoc := int(float64(tmp[x].X)*s + float64(tmp[x].Y)*c)
+
+				t.currentTrack.outline = append(t.currentTrack.outline, image.Pt(xLoc, yLoc))
+			}
+
+			// Recalc x & y ranges after rotation
+			t.currentTrack.minX = math.MaxInt
+			t.currentTrack.maxX = math.MinInt
+			t.currentTrack.minY = math.MaxInt
+			t.currentTrack.maxY = math.MinInt
+
+			for x := range t.currentTrack.outline {
+				xLoc := t.currentTrack.outline[x].X
+				yLoc := t.currentTrack.outline[x].Y
+
+				if xLoc < t.currentTrack.minX {
+					t.currentTrack.minX = xLoc
+				}
+				if xLoc > t.currentTrack.maxX {
+					t.currentTrack.maxX = xLoc
+				}
+
+				if yLoc < t.currentTrack.minY {
+					t.currentTrack.minY = yLoc
+				}
+				if yLoc > t.currentTrack.maxY {
+					t.currentTrack.maxY = yLoc
 				}
 			}
 
@@ -400,7 +423,8 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 			}
 		}
 
-		if !t.pitlaneReady &&
+		if t.trackReady &&
+			!t.pitlaneReady &&
 			!t.pitlaneStart.IsZero() &&
 			!t.pitlaneEnd.IsZero() {
 
@@ -422,6 +446,27 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 				if location.Timestamp.After(t.pitlaneEnd) {
 					break
 				}
+			}
+
+			tmp := make([]image.Point, 0)
+
+			// Translate values to be centered on 0, 0
+			for x := range t.currentTrack.pitlane {
+				xVal := -(t.currentTrack.pitlane[x].X - t.currentTrack.xOffset)
+				yVal := t.currentTrack.pitlane[x].Y - t.currentTrack.yOffset
+				tmp = append(tmp, image.Pt(xVal, yVal))
+			}
+
+			t.currentTrack.pitlane = make([]image.Point, 0)
+			for x := range tmp {
+
+				s := math.Sin(t.currentTrack.rotation)
+				c := math.Cos(t.currentTrack.rotation)
+
+				xLoc := int(float64(tmp[x].X)*c - float64(tmp[x].Y)*s)
+				yLoc := int(float64(tmp[x].X)*s + float64(tmp[x].Y)*c)
+
+				t.currentTrack.pitlane = append(t.currentTrack.pitlane, image.Pt(xLoc, yLoc))
 			}
 		}
 
@@ -496,6 +541,8 @@ var trackMapData = []trackInfo{
 			f.WriteString(fmt.Sprintf("\t\tminY: %d,\n", track.minY))
 			f.WriteString(fmt.Sprintf("\t\tmaxY: %d,\n", track.maxY))
 			f.WriteString(fmt.Sprintf("\t\trotation: %f,\n", track.rotation))
+			f.WriteString(fmt.Sprintf("\t\txOffset: %d,\n", track.xOffset))
+			f.WriteString(fmt.Sprintf("\t\tyOffset: %d,\n", track.yOffset))
 			f.WriteString("\t},\n")
 		}
 	}
