@@ -43,7 +43,7 @@ func NewConfig() config {
 		webTimingAddresses:    nil,
 		webTimingPort:         8000,
 		showDebugReplay:       false,
-		predictionPitstopTime: time.Millisecond * 2500,
+		predictionPitstopTime: time.Second * 20,
 	}
 
 	for _, address := range c.getLocalIP() {
