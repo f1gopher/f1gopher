@@ -18,6 +18,8 @@ type catchingInfo struct {
 	visible     bool
 	lapTimes    []time.Duration
 	gapToLeader time.Duration
+	tire        Messages.TireType
+	lapsOnTire  int
 }
 
 type catching struct {
@@ -38,6 +40,8 @@ type catching struct {
 
 	table1 *giu.TableWidget
 	table2 *giu.TableWidget
+
+	config PanelConfig
 }
 
 func CreateCatching() Panel {
@@ -56,6 +60,8 @@ func (c *catching) Type() Type { return Catching }
 func (c *catching) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	c.driverData = map[int]*catchingInfo{}
 	c.lap = 0
+	c.config = config
+	c.driverNames = []string{}
 
 	c.selectedDriver1 = NothingSelected
 	c.selectedDriver1Number = NothingSelected
@@ -101,6 +107,8 @@ func (c *catching) ProcessTiming(data Messages.Timing) {
 
 	driverInfo.position = data.Position
 	driverInfo.gapToLeader = data.GapToLeader
+	driverInfo.tire = data.Tire
+	driverInfo.lapsOnTire = data.LapsOnTire
 
 	// TODO - when the safety car comes out we don't get a lap time - brazil 2022
 	// TODO - we don't get a lap time for the first lap - try calculate one in the lib?
@@ -152,6 +160,15 @@ func (c *catching) Draw(width int, height int) (widgets []giu.Widget) {
 	}
 
 	return []giu.Widget{
+		giu.Row(
+			giu.ArrowButton(giu.DirectionLeft).OnClick(func() {
+				c.config.SetPredictedPitstopTime(c.config.PredictedPitstopTime() - (time.Millisecond * 100))
+			}),
+			giu.Labelf("Pitstop Time: %5s", c.config.PredictedPitstopTime()),
+			giu.ArrowButton(giu.DirectionRight).OnClick(func() {
+				c.config.SetPredictedPitstopTime(c.config.PredictedPitstopTime() + (time.Millisecond * 100))
+			})),
+		giu.Dummy(0, 20),
 		giu.Row(
 			giu.Combo("Driver 1", driverName1, c.driverNames, &c.selectedDriver1).OnChange(func() {
 				for num, driver := range c.driverData {
@@ -246,9 +263,23 @@ func (c *catching) driverComparison2(driver1Number int, driver2Number int) ([]*g
 		}
 	}
 
+	gap := second.gapToLeader - first.gapToLeader
+
 	topRow = append(topRow, giu.TableColumn("Gap").InnerWidthOrWeight(timeWidth))
-	driver1Row = append(driver1Row, giu.Label("-"))
-	driver2Row = append(driver2Row, giu.Labelf("%s", fmtDuration(second.gapToLeader-first.gapToLeader)))
+	if gap >= c.config.PredictedPitstopTime() {
+		driver1Row = append(driver1Row, giu.Style().SetColor(giu.StyleColorText, colornames.Green).To(giu.Label("  Can Pit")))
+	} else {
+		driver1Row = append(driver1Row, giu.Label("-"))
+	}
+	driver2Row = append(driver2Row, giu.Labelf("%s", fmtDuration(gap)))
+
+	topRow = append(topRow, giu.TableColumn("Tire").InnerWidthOrWeight(timeWidth))
+	driver1Row = append(driver1Row, giu.Style().SetColor(giu.StyleColorText, tireColor(driver1.tire)).To(giu.Label(driver1.tire.String())))
+	driver2Row = append(driver2Row, giu.Style().SetColor(giu.StyleColorText, tireColor(driver2.tire)).To(giu.Label(driver2.tire.String())))
+
+	topRow = append(topRow, giu.TableColumn("Laps On Tire").InnerWidthOrWeight(100))
+	driver1Row = append(driver1Row, giu.Labelf("%d", driver1.lapsOnTire))
+	driver2Row = append(driver2Row, giu.Labelf("%d", driver2.lapsOnTire))
 
 	var rows []*giu.TableRowWidget
 	rows = append(rows, giu.TableRow(driver1Row...))
