@@ -18,7 +18,6 @@ package ui
 import (
 	"github.com/AllenDang/giu"
 	"strings"
-	"time"
 )
 
 type optionsMenu struct {
@@ -31,7 +30,6 @@ func (o *optionsMenu) draw(width int, height int) {
 	menuHeight := float32(380.0)
 	posX := (float32(width) - menuWidth) / 2
 	posY := (float32(height) - menuHeight) / 2
-	predictionPitstopTime := float32(o.config.predictionPitstopTime.Seconds())
 
 	giu.Window("Options").
 		Pos(posX, posY).
@@ -54,10 +52,6 @@ func (o *optionsMenu) draw(width int, height int) {
 			giu.Dummy(1, 20),
 			giu.Checkbox("Show Debug Replay", &o.config.showDebugReplay),
 			giu.Dummy(1, 20),
-			giu.InputFloat(&predictionPitstopTime).Size(60).Label("Prediction Pitstop Stationary Time (seconds)").OnChange(func() {
-				milli := int(predictionPitstopTime * 1000)
-				o.config.predictionPitstopTime = time.Duration(milli) * time.Millisecond
-			}),
 			giu.Dummy(1, 20),
 			giu.Button("Back").OnClick(func() {
 				o.changeView(MainMenu, nil)

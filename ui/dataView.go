@@ -83,6 +83,9 @@ func (d *dataView) init(dataSrc f1gopherlib.F1GopherLib, config config) {
 	d.ctx, d.ctxShutdown = context.WithCancel(context.Background())
 	d.closing = false
 
+	// Reset the global pitstop loss time to the currently selected track default
+	config.SetPredictedPitstopTime(dataSrc.TimeLostInPitlane())
+
 	for x := range d.panels {
 		d.panels[x].Init(dataSrc, &config)
 	}
