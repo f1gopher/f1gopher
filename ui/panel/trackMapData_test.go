@@ -32,7 +32,7 @@ var fudge = map[string]fudgeFactors{
 	"Circuit de Barcelona-Catalunya":              {rotation: -2.129302},
 	"Circuit de Monaco":                           {rotation: 1.396263},
 	"Circuit de Spa-Francorchamps":                {rotation: 1.308997},
-	"Circuit Gilles Villeneuve":                   {rotation: -1.27409},
+	"Circuit Gilles Villeneuve":                   {rotation: 1.832596},
 	"Circuit of the Americas":                     {rotation: 0.0},
 	"Circuit Paul Ricard":                         {rotation: 0.0},
 	"Circuit Park Zandvoort":                      {rotation: 0.0},
