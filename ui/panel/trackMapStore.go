@@ -174,7 +174,7 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 
 		t.gc.SetSourceRGBA(1, 0, 0, 1)
 
-		// Rotate around the centre of the track
+		// 0,0 is in the center of the display
 		t.gc.Translate(float64(width)/2, float64(height)/2)
 
 		// Center marker
@@ -378,10 +378,10 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 
 			// Rotate values
 			t.currentTrack.outline = make([]image.Point, 0)
-			for x := range tmp {
+			s := math.Sin(t.currentTrack.rotation)
+			c := math.Cos(t.currentTrack.rotation)
 
-				s := math.Sin(t.currentTrack.rotation)
-				c := math.Cos(t.currentTrack.rotation)
+			for x := range tmp {
 
 				xLoc := int(float64(tmp[x].X)*c - float64(tmp[x].Y)*s)
 				yLoc := int(float64(tmp[x].X)*s + float64(tmp[x].Y)*c)
@@ -458,11 +458,9 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 			}
 
 			t.currentTrack.pitlane = make([]image.Point, 0)
+			s := math.Sin(t.currentTrack.rotation)
+			c := math.Cos(t.currentTrack.rotation)
 			for x := range tmp {
-
-				s := math.Sin(t.currentTrack.rotation)
-				c := math.Cos(t.currentTrack.rotation)
-
 				xLoc := int(float64(tmp[x].X)*c - float64(tmp[x].Y)*s)
 				yLoc := int(float64(tmp[x].X)*s + float64(tmp[x].Y)*c)
 

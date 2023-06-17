@@ -20,6 +20,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"math"
 	"sort"
 	"sync"
 
@@ -168,10 +169,8 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 			return cars[i].DriverNumber < cars[j].DriverNumber
 		})
 
-		// Rotate around the centre of the track
+		// 0, 0 is the center of the display
 		t.mapGc.Translate(float64(displayWidth)/2, float64(displayHeight)/2)
-		t.mapGc.Rotate(rotation)
-		//t.mapGc.Translate(-float64(displayWidth)/2, -float64(displayHeight)/2)
 
 		// Center marker
 		//t.mapGc.SetSourceRGBA(0, 1, 0, 1)
@@ -182,29 +181,21 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 		//t.mapGc.LineTo(0, 50)
 		//t.mapGc.Stroke()
 
+		s := math.Sin(rotation)
+		c := math.Cos(rotation)
+
 		for _, car := range cars {
 			x := car.X
 			y := car.Y
 
-			// Invert x
-			x = float64(displayWidth) - x
-			//y = float64(displayWidth) - y
+			xVal := -(x - float64(xOffset))
+			yVal := y - float64(yOffset)
 
-			//x = x / scaling
-			//y = y / scaling
+			x = xVal*c - yVal*s
+			y = xVal*s + yVal*c
 
-			//x -= float64(xOffset) / scaling
-			//y += float64(yOffset) / scaling
-
-			x = (x - float64(yOffset)) / scaling
-			y = (y - float64(xOffset)) / scaling
-
-			// TODO - hacks to make canada work
-			// Up down
-			x += (6264 / scaling) //335
-
-			// Left right
-			y -= (1776 / scaling) //95
+			x = x / scaling
+			y = y / scaling
 
 			driverInfo, exists := t.driverData[car.DriverNumber]
 			driverColor := colornames.White
