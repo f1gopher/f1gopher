@@ -168,8 +168,9 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 			drs = "Open"
 		}
 		drsColor := colornames.White
-		// TODO - only green when track DRS state is enabled or unknown
-		if drivers[x].TimeDiffToPositionAhead > 0 && drivers[x].TimeDiffToPositionAhead < time.Second {
+		if t.event.DRSEnabled != Messages.DRSDisabled &&
+			drivers[x].TimeDiffToPositionAhead > 0 &&
+			drivers[x].TimeDiffToPositionAhead < time.Second {
 			drsColor = colornames.Green
 		}
 

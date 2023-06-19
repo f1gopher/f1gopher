@@ -274,12 +274,12 @@ func (c *catching) driverComparison2(driver1Number int, driver2Number int) ([]*g
 	driver2Row = append(driver2Row, giu.Labelf("%s", fmtDuration(gap)))
 
 	topRow = append(topRow, giu.TableColumn("Tire").InnerWidthOrWeight(timeWidth))
-	driver1Row = append(driver1Row, giu.Style().SetColor(giu.StyleColorText, tireColor(driver1.tire)).To(giu.Label(driver1.tire.String())))
-	driver2Row = append(driver2Row, giu.Style().SetColor(giu.StyleColorText, tireColor(driver2.tire)).To(giu.Label(driver2.tire.String())))
+	driver1Row = append(driver1Row, giu.Style().SetColor(giu.StyleColorText, tireColor(first.tire)).To(giu.Label(first.tire.String())))
+	driver2Row = append(driver2Row, giu.Style().SetColor(giu.StyleColorText, tireColor(second.tire)).To(giu.Label(second.tire.String())))
 
 	topRow = append(topRow, giu.TableColumn("Laps On Tire").InnerWidthOrWeight(100))
-	driver1Row = append(driver1Row, giu.Labelf("%d", driver1.lapsOnTire))
-	driver2Row = append(driver2Row, giu.Labelf("%d", driver2.lapsOnTire))
+	driver1Row = append(driver1Row, giu.Labelf("%d", first.lapsOnTire))
+	driver2Row = append(driver2Row, giu.Labelf("%d", second.lapsOnTire))
 
 	var rows []*giu.TableRowWidget
 	rows = append(rows, giu.TableRow(driver1Row...))

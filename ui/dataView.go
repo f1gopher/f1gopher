@@ -276,11 +276,13 @@ func (d *dataView) newLayout(width int, height int) {
 		Size(timingWidth, timingHeight)
 	w.Layout(d.panels[panel.Timing].Draw(0, 0)...)
 
-	w = giu.Window(panel.RaceControlMessages.String()).
-		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove|giu.WindowFlagsAlwaysHorizontalScrollbar|giu.WindowFlagsAlwaysVerticalScrollbar).
-		Pos(timingWidth+gap, row1StartY).
-		Size(rcmWidth, timingHeight)
-	w.Layout(d.panels[panel.RaceControlMessages].Draw(0, 0)...)
+	if d.dataSrc.Session() == Messages.RaceSession || d.dataSrc.Session() == Messages.SprintSession {
+		w = giu.Window(panel.RaceControlMessages.String()).
+			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove|giu.WindowFlagsAlwaysHorizontalScrollbar|giu.WindowFlagsAlwaysVerticalScrollbar).
+			Pos(timingWidth+gap, row1StartY).
+			Size(rcmWidth, timingHeight)
+		w.Layout(d.panels[panel.RaceControlMessages].Draw(0, 0)...)
+	}
 
 	telemetryWidth := float32(width) - gap - weatherWidth
 
@@ -290,11 +292,20 @@ func (d *dataView) newLayout(width int, height int) {
 		Size(trackMapWidth, row2Height)
 	w.Layout(d.panels[panel.TrackMap].Draw(int(trackMapWidth), int(float32(height)-row2StartY))...)
 
-	w = giu.Window(panel.Catching.String()).
-		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
-		Pos(trackMapWidth+gap, row2StartY).
-		Size(telemetryWidth, row2Height)
-	w.Layout(d.panels[panel.Catching].Draw(int(telemetryWidth), int(row2Height))...)
+	// For none race session don't show the catch panel but move the race control messages into it's place
+	if d.dataSrc.Session() == Messages.RaceSession || d.dataSrc.Session() == Messages.SprintSession {
+		w = giu.Window(panel.Catching.String()).
+			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+			Pos(trackMapWidth+gap, row2StartY).
+			Size(telemetryWidth, row2Height)
+		w.Layout(d.panels[panel.Catching].Draw(int(telemetryWidth), int(row2Height))...)
+	} else {
+		w = giu.Window(panel.RaceControlMessages.String()).
+			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove|giu.WindowFlagsAlwaysHorizontalScrollbar|giu.WindowFlagsAlwaysVerticalScrollbar).
+			Pos(trackMapWidth+gap, row2StartY).
+			Size(telemetryWidth, row2Height)
+		w.Layout(d.panels[panel.RaceControlMessages].Draw(int(telemetryWidth), int(row2Height))...)
+	}
 }
 
 func (d *dataView) processData() {
