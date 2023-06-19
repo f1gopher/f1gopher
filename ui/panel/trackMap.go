@@ -32,8 +32,9 @@ import (
 )
 
 type trackMapInfo struct {
-	color color.RGBA
-	name  string
+	color     color.RGBA
+	name      string
+	isStopped bool
 }
 
 type trackMap struct {
@@ -44,6 +45,7 @@ type trackMap struct {
 	driverPositionsLock sync.Mutex
 	event               Messages.Event
 	eventLock           sync.Mutex
+	showStoppedCars     bool
 
 	trackTexture       imgui.TextureID
 	trackTextureWidth  float32
@@ -60,6 +62,7 @@ func CreateTrackMap() Panel {
 		mapStore:        CreateTrackMapStore(),
 		driverPositions: map[int]Messages.Location{},
 		driverData:      map[int]trackMapInfo{},
+		showStoppedCars: true,
 	}
 }
 
@@ -105,6 +108,13 @@ func (t *trackMap) ProcessLocation(data Messages.Location) {
 
 func (t *trackMap) ProcessTiming(data Messages.Timing) {
 	t.mapStore.ProcessTiming(data)
+
+	// Update the driver stopped state if it has changce
+	driverData := t.driverData[data.Number]
+	if data.Location == Messages.Stopped != driverData.isStopped {
+		driverData.isStopped = data.Location == Messages.Stopped
+		t.driverData[data.Number] = driverData
+	}
 }
 
 func (t *trackMap) ProcessEvent(data Messages.Event) {
@@ -121,11 +131,17 @@ func (t *trackMap) Draw(width int, height int) []giu.Widget {
 	}
 	t.driverPositionsLock.Unlock()
 
+	// Allow room for the checkbox
+	height = height - 20
+
 	t.redraw(width, height, cars)
 
 	if t.trackTexture != 0 {
 		return []giu.Widget{
 			giu.Image(giu.ToTexture(t.trackTexture)).Size(t.trackTextureWidth, t.trackTextureHeight),
+			giu.Row(
+				giu.Checkbox("Show Stopped Cars", &t.showStoppedCars),
+			),
 		}
 	}
 
@@ -138,6 +154,9 @@ func (t *trackMap) Draw(width int, height int) []giu.Widget {
 			offset := int(textWidth / 2)
 			canvas.AddText(pos.Add(image.Pt((width/2)-offset, height/2)), colornames.Yellow, "Building Map...")
 		}),
+		giu.Row(
+			giu.Checkbox("Show Stopped Cars", &t.showStoppedCars),
+		),
 	}
 }
 
@@ -198,6 +217,12 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 			y = y / scaling
 
 			driverInfo, exists := t.driverData[car.DriverNumber]
+
+			// Skip stopped cars if turned off
+			if driverInfo.isStopped && !t.showStoppedCars {
+				continue
+			}
+
 			driverColor := colornames.White
 			driverName := "UNK"
 			if exists {
@@ -223,7 +248,7 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 			t.mapGc.Stroke()
 
 			// Draw driver short name
-			t.mapGc.MoveTo(x+float64(15), y+2.5)
+			t.mapGc.MoveTo(x+float64(10), y-5)
 			t.mapGc.ShowText(driverName)
 			t.mapGc.Stroke()
 		}
