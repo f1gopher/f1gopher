@@ -34,13 +34,17 @@ type timing struct {
 	event     Messages.Event
 	eventLock sync.Mutex
 
-	fastestSector1        time.Duration
-	fastestSector2        time.Duration
-	fastestSector3        time.Duration
-	theoreticalFastestLap time.Duration
-	previousSessionActive Messages.SessionState
-	fastestSpeedTrap      int
-	timeLostInPitlane     time.Duration
+	fastestSector1         time.Duration
+	fastestSector1Driver   string
+	fastestSector2         time.Duration
+	fastestSector2Driver   string
+	fastestSector3         time.Duration
+	fastestSector3Driver   string
+	theoreticalFastestLap  time.Duration
+	fastestSpeedTrap       int
+	fastestSpeedTrapDriver string
+	timeLostInPitlane      time.Duration
+	previousEventType      Messages.EventType
 
 	gapToInfront        bool
 	isRaceSession       bool
@@ -87,10 +91,14 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	t.lastPitLossColor = make(map[int]color.RGBA)
 	t.lastPitLossValue = make(map[int]string)
 	t.fastestSector1 = 0
+	t.fastestSector1Driver = ""
 	t.fastestSector2 = 0
+	t.fastestSector2Driver = ""
 	t.fastestSector3 = 0
+	t.fastestSector3Driver = ""
 	t.theoreticalFastestLap = 0
-	t.previousSessionActive = Messages.UnknownState
+	t.fastestSpeedTrapDriver = ""
+	t.previousEventType = Messages.PreSeason
 	t.fastestSpeedTrap = 0
 	t.timeLostInPitlane = dataSrc.TimeLostInPitlane()
 	t.isRaceSession = dataSrc.Session() == Messages.RaceSession
@@ -167,10 +175,11 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 		if drivers[x].DRSOpen {
 			drs = "Open"
 		}
+		// Can use DRS if a race session and close enough to the car infront or if not a race session
 		drsColor := colornames.White
 		if t.event.DRSEnabled != Messages.DRSDisabled &&
-			drivers[x].TimeDiffToPositionAhead > 0 &&
-			drivers[x].TimeDiffToPositionAhead < time.Second {
+			((t.event.Type != Messages.Race && t.event.Type != Messages.Sprint) ||
+				(drivers[x].TimeDiffToPositionAhead > 0 && drivers[x].TimeDiffToPositionAhead < time.Second)) {
 			drsColor = colornames.Green
 		}
 
@@ -269,13 +278,6 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 					if gapToCar < minGap {
 						continue
 					}
-
-					//if drivers[driverBehind].TimeDiffToPositionAhead-pitTimeLost >= 0 {
-					//	timeToCarBehind = drivers[driverBehind].TimeDiffToPositionAhead - timeToCarAhead
-					//	break
-					//}
-					//
-					//pitTimeLost = pitTimeLost - drivers[driverBehind].TimeDiffToPositionAhead
 
 					timeToCarBehind = gapToCar - minGap
 					timeToCarAhead = drivers[driverBehind].TimeDiffToPositionAhead - timeToCarBehind
@@ -393,8 +395,11 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 		giu.Label(""),
 		giu.Label("Session:"),
 		giu.Style().SetColor(giu.StyleColorText, purpleColor).To(giu.Label(fmtDuration(t.fastestSector1))),
+		giu.Tooltip(t.fastestSector1Driver),
 		giu.Style().SetColor(giu.StyleColorText, purpleColor).To(giu.Label(fmtDuration(t.fastestSector2))),
+		giu.Tooltip(t.fastestSector2Driver),
 		giu.Style().SetColor(giu.StyleColorText, purpleColor).To(giu.Label(fmtDuration(t.fastestSector3))),
+		giu.Tooltip(t.fastestSector3Driver),
 		giu.Style().SetColor(giu.StyleColorText, purpleColor).To(giu.Label(fmtDuration(t.theoreticalFastestLap))),
 		giu.Label(""),
 		giu.Label(""),
@@ -407,10 +412,12 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 			giu.Label(""),
 			giu.Label(""),
 			giu.Style().SetColor(giu.StyleColorText, purpleColor).To(giu.Label(fmt.Sprintf("%d", t.fastestSpeedTrap))),
+			giu.Tooltip(t.fastestSpeedTrapDriver),
 		}...)
 	} else {
 		rowWidgets = append(rowWidgets,
 			giu.Style().SetColor(giu.StyleColorText, purpleColor).To(giu.Label(fmt.Sprintf("%d", t.fastestSpeedTrap))),
+			giu.Tooltip(t.fastestSpeedTrapDriver),
 		)
 	}
 
@@ -425,18 +432,22 @@ func (t *timing) updateSessionStats(drivers []Messages.Timing) {
 	for _, driver := range drivers {
 		if (driver.Sector1 > 0 && driver.Sector1 < t.fastestSector1) || t.fastestSector1 == 0 {
 			t.fastestSector1 = driver.Sector1
+			t.fastestSector1Driver = driver.ShortName
 		}
 
 		if (driver.Sector2 > 0 && driver.Sector2 < t.fastestSector2) || t.fastestSector2 == 0 {
 			t.fastestSector2 = driver.Sector2
+			t.fastestSector2Driver = driver.ShortName
 		}
 
 		if (driver.Sector3 > 0 && driver.Sector3 < t.fastestSector3) || t.fastestSector3 == 0 {
 			t.fastestSector3 = driver.Sector3
+			t.fastestSector3Driver = driver.ShortName
 		}
 
 		if driver.SpeedTrap > t.fastestSpeedTrap {
 			t.fastestSpeedTrap = driver.SpeedTrap
+			t.fastestSpeedTrapDriver = driver.ShortName
 		}
 	}
 
@@ -444,22 +455,14 @@ func (t *timing) updateSessionStats(drivers []Messages.Timing) {
 		t.theoreticalFastestLap = t.fastestSector1 + t.fastestSector2 + t.fastestSector3
 	}
 
-	if t.event.Status == Messages.Started {
-		if t.previousSessionActive != Messages.Started {
-			t.fastestSector1 = 0
-			t.fastestSector2 = 0
-			t.fastestSector3 = 0
-			t.theoreticalFastestLap = 0
-			t.previousSessionActive = t.event.Status
-		}
-	} else if t.event.Status == Messages.Inactive {
+	// If the event type changes then reset everything (will handle different quali sessions and if the app is kept
+	// open all day)
+	if t.previousEventType != t.event.Type {
 		t.fastestSector1 = 0
 		t.fastestSector2 = 0
 		t.fastestSector3 = 0
 		t.theoreticalFastestLap = 0
-		t.previousSessionActive = t.event.Status
-	} else {
-		t.previousSessionActive = t.event.Status
+		t.previousEventType = t.event.Type
 	}
 }
 
