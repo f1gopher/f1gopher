@@ -295,7 +295,7 @@ func (d *dataView) newLayout(width int, height int) {
 	// For none race session don't show the catch panel but move the race control messages into it's place
 	if d.dataSrc.Session() == Messages.RaceSession || d.dataSrc.Session() == Messages.SprintSession {
 		w = giu.Window(panel.Catching.String()).
-			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove|giu.WindowFlagsAlwaysVerticalScrollbar).
 			Pos(trackMapWidth+gap, row2StartY).
 			Size(telemetryWidth, row2Height)
 		w.Layout(d.panels[panel.Catching].Draw(int(telemetryWidth), int(row2Height))...)

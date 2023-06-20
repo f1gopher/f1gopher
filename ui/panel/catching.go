@@ -14,6 +14,7 @@ import (
 type catchingInfo struct {
 	color       color.RGBA
 	name        string
+	team        string
 	position    int
 	visible     bool
 	lapTimes    []time.Duration
@@ -22,24 +23,46 @@ type catchingInfo struct {
 	lapsOnTire  int
 }
 
+type trackerType int
+
+const (
+	AnotherDriver trackerType = iota
+	CarInfront
+	CarBehind
+	CarInfrontBehind
+	Leader
+	Teammate
+)
+
+var trackerModes = []string{"Another Driver", "Car Infront", "Car Behind", "Cars Infront & Behind", "Leader", "Teammate"}
+
+func (t trackerType) String() string {
+	return trackerModes[t]
+}
+
+type catchingBlock struct {
+	mode         trackerType
+	modeDropdown int32
+
+	selectedDriver1Index  int32
+	selectedDriver1Number int
+	selectedDriver2Index  int32
+	selectedDriver2Number int
+
+	selectedDriver3Number int
+
+	table *giu.TableWidget
+}
+
 type catching struct {
 	driverData map[int]*catchingInfo
 	lap        int
 
 	driverNames []string
+	blocks      []catchingBlock
+	driverOrder []int
 
-	selectedDriver1       int32
-	selectedDriver1Number int
-	selectedDriver2       int32
-	selectedDriver2Number int
-
-	selectedDriver3       int32
-	selectedDriver3Number int
-	selectedDriver4       int32
-	selectedDriver4Number int
-
-	table1 *giu.TableWidget
-	table2 *giu.TableWidget
+	removes []int
 
 	config PanelConfig
 }
@@ -62,19 +85,9 @@ func (c *catching) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	c.lap = 0
 	c.config = config
 	c.driverNames = []string{}
-
-	c.selectedDriver1 = NothingSelected
-	c.selectedDriver1Number = NothingSelected
-	c.selectedDriver2 = NothingSelected
-	c.selectedDriver2Number = NothingSelected
-
-	c.selectedDriver3 = NothingSelected
-	c.selectedDriver3Number = NothingSelected
-	c.selectedDriver4 = NothingSelected
-	c.selectedDriver4Number = NothingSelected
-
-	c.table1 = giu.Table().FastMode(true).Flags(giu.TableFlagsResizable | giu.TableFlagsSizingFixedSame)
-	c.table2 = giu.Table().FastMode(true).Flags(giu.TableFlagsResizable | giu.TableFlagsSizingFixedSame)
+	c.blocks = make([]catchingBlock, 0)
+	c.driverOrder = nil
+	c.removes = []int{}
 }
 
 func (c *catching) Close() {}
@@ -84,6 +97,7 @@ func (c *catching) ProcessDrivers(data Messages.Drivers) {
 		driver := &catchingInfo{
 			color:    data.Drivers[x].Color,
 			name:     data.Drivers[x].ShortName,
+			team:     data.Drivers[x].Team,
 			lapTimes: []time.Duration{},
 			visible:  true,
 		}
@@ -93,6 +107,12 @@ func (c *catching) ProcessDrivers(data Messages.Drivers) {
 	}
 
 	sort.Strings(c.driverNames)
+
+	// +1 because 0 will be empty because positions aren't zero based
+	c.driverOrder = make([]int, len(c.driverNames)+1)
+	for x := range data.Drivers {
+		c.driverOrder[data.Drivers[x].StartPosition] = data.Drivers[x].Number
+	}
 }
 
 func (c *catching) ProcessEvent(data Messages.Event) {
@@ -109,6 +129,8 @@ func (c *catching) ProcessTiming(data Messages.Timing) {
 	driverInfo.gapToLeader = data.GapToLeader
 	driverInfo.tire = data.Tire
 	driverInfo.lapsOnTire = data.LapsOnTire
+
+	c.driverOrder[data.Position] = data.Number
 
 	// TODO - when the safety car comes out we don't get a lap time - brazil 2022
 	// TODO - we don't get a lap time for the first lap - try calculate one in the lib?
@@ -129,37 +151,7 @@ func (c *catching) ProcessTiming(data Messages.Timing) {
 
 func (c *catching) Draw(width int, height int) (widgets []giu.Widget) {
 
-	if c.selectedDriver1 != NothingSelected && c.selectedDriver2 != NothingSelected {
-		topRow1, rows := c.driverComparison2(c.selectedDriver1Number, c.selectedDriver2Number)
-
-		c.table1.Columns(topRow1...)
-		c.table1.Rows(rows...)
-	}
-	if c.selectedDriver3 != NothingSelected && c.selectedDriver4 != NothingSelected {
-		topRow1, rows := c.driverComparison2(c.selectedDriver3Number, c.selectedDriver4Number)
-
-		c.table2.Columns(topRow1...)
-		c.table2.Rows(rows...)
-	}
-
-	driverName1 := "<none>"
-	if c.selectedDriver1 != NothingSelected {
-		driverName1 = c.driverNames[c.selectedDriver1]
-	}
-	driverName2 := "<none>"
-	if c.selectedDriver2 != NothingSelected {
-		driverName2 = c.driverNames[c.selectedDriver2]
-	}
-	driverName3 := "<none>"
-	if c.selectedDriver3 != NothingSelected {
-		driverName3 = c.driverNames[c.selectedDriver3]
-	}
-	driverName4 := "<none>"
-	if c.selectedDriver4 != NothingSelected {
-		driverName4 = c.driverNames[c.selectedDriver4]
-	}
-
-	return []giu.Widget{
+	blockWidgets := []giu.Widget{
 		giu.Row(
 			giu.ArrowButton(giu.DirectionLeft).OnClick(func() {
 				c.config.SetPredictedPitstopTime(c.config.PredictedPitstopTime() - (time.Millisecond * 100))
@@ -167,57 +159,148 @@ func (c *catching) Draw(width int, height int) (widgets []giu.Widget) {
 			giu.Labelf("Pitstop Time: %5s", c.config.PredictedPitstopTime()),
 			giu.ArrowButton(giu.DirectionRight).OnClick(func() {
 				c.config.SetPredictedPitstopTime(c.config.PredictedPitstopTime() + (time.Millisecond * 100))
+			}),
+			giu.Button("Add Tracker").OnClick(func() {
+				newBlock := catchingBlock{
+					mode:                  AnotherDriver,
+					modeDropdown:          0,
+					selectedDriver1Index:  NothingSelected,
+					selectedDriver1Number: NothingSelected,
+					selectedDriver2Index:  NothingSelected,
+					selectedDriver2Number: NothingSelected,
+					table:                 giu.Table().FastMode(true).Flags(giu.TableFlagsResizable | giu.TableFlagsSizingFixedSame),
+				}
+
+				c.blocks = append(c.blocks, newBlock)
 			})),
-		giu.Dummy(0, 20),
-		giu.Row(
-			giu.Combo("Driver 1", driverName1, c.driverNames, &c.selectedDriver1).OnChange(func() {
-				for num, driver := range c.driverData {
-					if driver.name == c.driverNames[c.selectedDriver1] {
-						c.selectedDriver1Number = num
-						break
-					}
-				}
-			}).Size(100),
-			giu.Combo("Driver 2", driverName2, c.driverNames, &c.selectedDriver2).OnChange(func() {
-				for num, driver := range c.driverData {
-					if driver.name == c.driverNames[c.selectedDriver2] {
-						c.selectedDriver2Number = num
-						break
-					}
-				}
-			}).Size(100),
-		),
-		c.table1,
-		giu.Dummy(0, 20),
-		giu.Row(
-			giu.Combo("Driver 3", driverName3, c.driverNames, &c.selectedDriver3).OnChange(func() {
-				for num, driver := range c.driverData {
-					if driver.name == c.driverNames[c.selectedDriver3] {
-						c.selectedDriver3Number = num
-						break
-					}
-				}
-			}).Size(100),
-			giu.Combo("Driver 4", driverName4, c.driverNames, &c.selectedDriver4).OnChange(func() {
-				for num, driver := range c.driverData {
-					if driver.name == c.driverNames[c.selectedDriver4] {
-						c.selectedDriver4Number = num
-						break
-					}
-				}
-			}).Size(100),
-		),
-		c.table2,
 	}
+
+	// Iterate the removes in reverse order so when we remove something it doesn't affect the other remove indexes
+	sort.Sort(sort.Reverse(sort.IntSlice(c.removes)))
+	for _, x := range c.removes {
+		c.blocks = append(c.blocks[:x], c.blocks[x+1:]...)
+	}
+	c.removes = []int{}
+
+	for x := range c.blocks {
+		block := &c.blocks[x]
+		blockIndex := x
+
+		c.update(x)
+
+		if block.selectedDriver1Number != NothingSelected && block.selectedDriver2Number != NothingSelected {
+			topRow1, rows := c.driverComparison(
+				block.selectedDriver1Number,
+				block.selectedDriver2Number,
+				block.selectedDriver3Number,
+				block.mode)
+
+			block.table.Columns(topRow1...)
+			block.table.Rows(rows...)
+		}
+
+		driverName1 := "<none>"
+		if block.selectedDriver1Index != NothingSelected {
+			driverName1 = c.driverNames[block.selectedDriver1Index]
+		}
+		driverName2 := "<none>"
+		if block.selectedDriver2Index != NothingSelected {
+			driverName2 = c.driverNames[block.selectedDriver2Index]
+		}
+
+		blockWidgets = append(blockWidgets, giu.Dummy(0, 20))
+		if block.mode == AnotherDriver {
+			blockWidgets = append(blockWidgets,
+				giu.Row(
+					giu.Combo("Mode", block.mode.String(), trackerModes, &block.modeDropdown).OnChange(func() {
+						block.mode = trackerType(block.modeDropdown)
+
+						if block.mode == Teammate {
+							block.selectedDriver3Number = NothingSelected
+							block.selectedDriver2Number = c.findTeammate(block.selectedDriver1Number)
+						}
+					}).Size(200),
+					giu.Combo("Driver", driverName1, c.driverNames, &block.selectedDriver1Index).OnChange(func() {
+						for num, driver := range c.driverData {
+							if driver.name == c.driverNames[block.selectedDriver1Index] {
+								block.selectedDriver3Number = NothingSelected
+								block.selectedDriver1Number = num
+								break
+							}
+						}
+					}).Size(100),
+					giu.Combo("Other Driver", driverName2, c.driverNames, &block.selectedDriver2Index).OnChange(func() {
+						for num, driver := range c.driverData {
+							if driver.name == c.driverNames[block.selectedDriver2Index] {
+								block.selectedDriver3Number = NothingSelected
+								block.selectedDriver2Number = num
+								break
+							}
+						}
+					}).Size(100),
+					giu.Button("Remove").OnClick(func() {
+						c.removes = append(c.removes, blockIndex)
+					}),
+				))
+		} else {
+			blockWidgets = append(blockWidgets,
+				giu.Row(
+					giu.Combo("Mode", block.mode.String(), trackerModes, &block.modeDropdown).OnChange(func() {
+						block.mode = trackerType(block.modeDropdown)
+
+						if block.mode == Teammate {
+							block.selectedDriver3Number = NothingSelected
+							block.selectedDriver2Number = c.findTeammate(block.selectedDriver1Number)
+						}
+					}).Size(200),
+					giu.Combo("Driver", driverName1, c.driverNames, &block.selectedDriver1Index).OnChange(func() {
+						for num, driver := range c.driverData {
+							if driver.name == c.driverNames[block.selectedDriver1Index] {
+								block.selectedDriver1Number = num
+
+								if block.mode == Teammate {
+									block.selectedDriver3Number = NothingSelected
+									block.selectedDriver2Number = c.findTeammate(block.selectedDriver1Number)
+								} else {
+									c.update(x)
+								}
+
+								break
+							}
+						}
+					}).Size(100),
+					giu.Button("Remove").OnClick(func() {
+						c.removes = append(c.removes, blockIndex)
+					}),
+				))
+		}
+		blockWidgets = append(blockWidgets, block.table)
+	}
+
+	return blockWidgets
 }
 
-func (c *catching) driverComparison2(driver1Number int, driver2Number int) ([]*giu.TableColumnWidget, []*giu.TableRowWidget) {
+func (c *catching) driverComparison(driver1Number int, driver2Number int, driver3Number int, mode trackerType) ([]*giu.TableColumnWidget, []*giu.TableRowWidget) {
 	driver1 := c.driverData[driver1Number]
 	driver2 := c.driverData[driver2Number]
+	var driver3 *catchingInfo = nil
+	// For infront and behind the driver1 is the focussed driver and should be in the middle
+	if mode == CarInfrontBehind {
+		driver1 = c.driverData[driver2Number]
+		driver2 = c.driverData[driver1Number]
+		driver3 = c.driverData[driver3Number]
+	}
 
 	first := driver1
 	second := driver2
-	if first.position > second.position {
+
+	// Order the drivers for these modes. Other modes the order is fixed
+	if mode == Teammate || mode == AnotherDriver {
+		if first.position > second.position {
+			first = driver2
+			second = driver1
+		}
+	} else if mode == CarInfront || mode == Leader {
 		first = driver2
 		second = driver1
 	}
@@ -237,41 +320,98 @@ func (c *catching) driverComparison2(driver1Number int, driver2Number int) ([]*g
 		giu.Labelf("%s", second.name)))
 	driver2Row = append(driver2Row, giu.Labelf("%d", second.position))
 
-	for x := c.lap - 5; x < c.lap; x++ {
-		if x < 1 {
-			continue
-		}
+	driver3Row := []giu.Widget{}
 
-		topRow = append(topRow, giu.TableColumn(fmt.Sprintf("%d", x)).InnerWidthOrWeight(timeWidth))
-		if len(first.lapTimes) < x {
-			driver1Row = append(driver1Row, giu.Label("-"))
-		} else {
-			driver1Row = append(driver1Row, giu.Labelf("%s", fmtDuration(first.lapTimes[x-1])))
-		}
+	if driver3 != nil {
+		driver3Row = append(driver3Row, giu.Style().SetColor(giu.StyleColorText, driver3.color).To(
+			giu.Labelf("%s", driver3.name)))
+		driver3Row = append(driver3Row, giu.Labelf("%d", driver3.position))
+	}
 
-		if len(first.lapTimes) < x || len(second.lapTimes) < x {
-			driver2Row = append(driver2Row, giu.Label("-"))
-		} else {
-			gap := fmtDuration(second.lapTimes[x-1] - first.lapTimes[x-1])
-			color := colornames.Green
-			if second.lapTimes[x-1]-first.lapTimes[x-1] > 0 {
-				color = colornames.Red
+	defaultColumnWidth := float32(timeWidth + 10.0)
+
+	if mode == CarInfrontBehind {
+		for x := c.lap - 5; x < c.lap; x++ {
+			if x < 1 {
+				continue
 			}
 
-			driver2Row = append(driver2Row, giu.Style().SetColor(giu.StyleColorText, color).To(
-				giu.Labelf("%s", gap)))
+			topRow = append(topRow, giu.TableColumn(fmt.Sprintf("%d", x)).InnerWidthOrWeight(defaultColumnWidth))
+			if len(second.lapTimes) < x {
+				driver1Row = append(driver1Row, giu.Label("-"))
+			} else {
+				gap := fmtDuration(first.lapTimes[x-1] - second.lapTimes[x-1])
+				color := colornames.Green
+				if first.lapTimes[x-1]-second.lapTimes[x-1] > 0 {
+					color = colornames.Red
+				}
+				driver1Row = append(driver1Row, giu.Style().SetColor(giu.StyleColorText, color).To(
+					giu.Labelf("%s", gap)))
+			}
+
+			if len(first.lapTimes) < x || len(second.lapTimes) < x {
+				driver2Row = append(driver2Row, giu.Label("-"))
+			} else {
+				driver2Row = append(driver2Row, giu.Labelf("%s", fmtDuration(second.lapTimes[x-1])))
+			}
+
+			if driver3 != nil {
+				if len(second.lapTimes) < x || len(driver3.lapTimes) < x {
+					driver3Row = append(driver3Row, giu.Label("-"))
+				} else {
+					gap := fmtDuration(driver3.lapTimes[x-1] - second.lapTimes[x-1])
+					color := colornames.Green
+					if driver3.lapTimes[x-1]-second.lapTimes[x-1] > 0 {
+						color = colornames.Red
+					}
+
+					driver3Row = append(driver3Row, giu.Style().SetColor(giu.StyleColorText, color).To(
+						giu.Labelf("%s", gap)))
+				}
+			}
+		}
+	} else {
+		for x := c.lap - 5; x < c.lap; x++ {
+			if x < 1 {
+				continue
+			}
+
+			topRow = append(topRow, giu.TableColumn(fmt.Sprintf("%d", x)).InnerWidthOrWeight(defaultColumnWidth))
+			if len(first.lapTimes) < x {
+				driver1Row = append(driver1Row, giu.Label("-"))
+			} else {
+				driver1Row = append(driver1Row, giu.Labelf("%s", fmtDuration(first.lapTimes[x-1])))
+			}
+
+			if len(first.lapTimes) < x || len(second.lapTimes) < x {
+				driver2Row = append(driver2Row, giu.Label("-"))
+			} else {
+				gap := fmtDuration(second.lapTimes[x-1] - first.lapTimes[x-1])
+				color := colornames.Green
+				if second.lapTimes[x-1]-first.lapTimes[x-1] > 0 {
+					color = colornames.Red
+				}
+
+				driver2Row = append(driver2Row, giu.Style().SetColor(giu.StyleColorText, color).To(
+					giu.Labelf("%s", gap)))
+			}
 		}
 	}
 
 	gap := second.gapToLeader - first.gapToLeader
 
-	topRow = append(topRow, giu.TableColumn("Gap").InnerWidthOrWeight(timeWidth))
+	topRow = append(topRow, giu.TableColumn("Gap").InnerWidthOrWeight(defaultColumnWidth))
 	if gap >= c.config.PredictedPitstopTime() {
 		driver1Row = append(driver1Row, giu.Style().SetColor(giu.StyleColorText, colornames.Green).To(giu.Label("  Can Pit")))
 	} else {
 		driver1Row = append(driver1Row, giu.Label("-"))
 	}
-	driver2Row = append(driver2Row, giu.Labelf("%s", fmtDuration(gap)))
+
+	if gap == 0 {
+		driver2Row = append(driver2Row, giu.Label("-"))
+	} else {
+		driver2Row = append(driver2Row, giu.Labelf("%s", fmtDuration(gap)))
+	}
 
 	topRow = append(topRow, giu.TableColumn("Tire").InnerWidthOrWeight(timeWidth))
 	driver1Row = append(driver1Row, giu.Style().SetColor(giu.StyleColorText, tireColor(first.tire)).To(giu.Label(first.tire.String())))
@@ -284,5 +424,114 @@ func (c *catching) driverComparison2(driver1Number int, driver2Number int) ([]*g
 	var rows []*giu.TableRowWidget
 	rows = append(rows, giu.TableRow(driver1Row...))
 	rows = append(rows, giu.TableRow(driver2Row...))
+
+	if driver3 != nil {
+		gap = driver3.gapToLeader - second.gapToLeader
+		if gap == 0 {
+			driver3Row = append(driver3Row, giu.Label("-"))
+		} else {
+			driver3Row = append(driver3Row, giu.Labelf("%s", fmtDuration(gap)))
+		}
+		driver3Row = append(driver3Row, giu.Style().SetColor(giu.StyleColorText, tireColor(driver3.tire)).To(giu.Label(driver3.tire.String())))
+		driver3Row = append(driver3Row, giu.Labelf("%d", driver3.lapsOnTire))
+		rows = append(rows, giu.TableRow(driver3Row...))
+	}
+
 	return topRow, rows
+}
+
+func (c *catching) findTeammate(currentDriver int) int {
+	if currentDriver == NothingSelected {
+		return NothingSelected
+	}
+
+	for num, driver := range c.driverData {
+		if num == currentDriver {
+			continue
+		}
+
+		if driver.team == c.driverData[currentDriver].team {
+			return num
+		}
+	}
+
+	return NothingSelected
+}
+
+func (c *catching) findLeader(currentDriver int) int {
+	if currentDriver == NothingSelected {
+		return NothingSelected
+	}
+
+	currentPos := c.driverData[currentDriver].position
+
+	if currentPos == 1 {
+		return NothingSelected
+	}
+
+	return c.driverOrder[1]
+}
+
+func (c *catching) findCarInfront(currentDriver int) int {
+	if currentDriver == NothingSelected {
+		return NothingSelected
+	}
+
+	currentPos := c.driverData[currentDriver].position
+
+	if currentPos == 1 {
+		return NothingSelected
+	}
+
+	return c.driverOrder[currentPos-1]
+}
+
+func (c *catching) findCarBehind(currentDriver int) int {
+	if currentDriver == NothingSelected {
+		return NothingSelected
+	}
+
+	currentPos := c.driverData[currentDriver].position
+
+	if currentPos+1 >= len(c.driverOrder) {
+		return NothingSelected
+	}
+
+	return c.driverOrder[currentPos+1]
+}
+
+func (c *catching) findCarInfrontAndBehind(currentDriver int) (front int, behind int) {
+	if currentDriver == NothingSelected {
+		return NothingSelected, NothingSelected
+	}
+
+	currentPos := c.driverData[currentDriver].position
+	front = NothingSelected
+	behind = NothingSelected
+
+	if currentPos != 1 {
+		front = c.driverOrder[currentPos-1]
+	}
+
+	if currentPos+1 < len(c.driverOrder) {
+		behind = c.driverOrder[currentPos+1]
+	}
+
+	return front, behind
+}
+
+func (c *catching) update(blockIndex int) {
+	switch c.blocks[blockIndex].mode {
+	case CarInfront:
+		c.blocks[blockIndex].selectedDriver3Number = NothingSelected
+		c.blocks[blockIndex].selectedDriver2Number = c.findCarInfront(c.blocks[blockIndex].selectedDriver1Number)
+	case CarBehind:
+		c.blocks[blockIndex].selectedDriver3Number = NothingSelected
+		c.blocks[blockIndex].selectedDriver2Number = c.findCarBehind(c.blocks[blockIndex].selectedDriver1Number)
+	case CarInfrontBehind:
+		c.blocks[blockIndex].selectedDriver2Number, c.blocks[blockIndex].selectedDriver3Number = c.findCarInfrontAndBehind(c.blocks[blockIndex].selectedDriver1Number)
+	case Leader:
+		c.blocks[blockIndex].selectedDriver3Number = NothingSelected
+		c.blocks[blockIndex].selectedDriver2Number = c.findLeader(c.blocks[blockIndex].selectedDriver1Number)
+	}
 }
