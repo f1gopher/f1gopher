@@ -109,7 +109,7 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	columns := []*giu.TableColumnWidget{
 		giu.TableColumn("Pos").InnerWidthOrWeight(25),
 		giu.TableColumn("Driver").InnerWidthOrWeight(41),
-		giu.TableColumn("Segment").InnerWidthOrWeight(290),
+		giu.TableColumn("Segment").InnerWidthOrWeight(240),
 		giu.TableColumn("Fastest").InnerWidthOrWeight(timeWidth),
 		giu.TableColumn("Gap").InnerWidthOrWeight(timeWidth),
 		giu.TableColumn("S1").InnerWidthOrWeight(timeWidth),
