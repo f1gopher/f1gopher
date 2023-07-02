@@ -311,14 +311,24 @@ func (c *catching) driverComparison(driver1Number int, driver2Number int, driver
 	}
 
 	driver1Row := []giu.Widget{}
-	driver1Row = append(driver1Row, giu.Style().SetColor(giu.StyleColorText, first.color).To(
-		giu.Labelf("%s", first.name)))
-	driver1Row = append(driver1Row, giu.Labelf("%d", first.position))
+	if first != nil {
+		driver1Row = append(driver1Row, giu.Style().SetColor(giu.StyleColorText, first.color).To(
+			giu.Labelf("%s", first.name)))
+		driver1Row = append(driver1Row, giu.Labelf("%d", first.position))
+	} else {
+		driver1Row = append(driver1Row, giu.Label(""))
+		driver1Row = append(driver1Row, giu.Label(""))
+	}
 
 	driver2Row := []giu.Widget{}
-	driver2Row = append(driver2Row, giu.Style().SetColor(giu.StyleColorText, second.color).To(
-		giu.Labelf("%s", second.name)))
-	driver2Row = append(driver2Row, giu.Labelf("%d", second.position))
+	if second != nil {
+		driver2Row = append(driver2Row, giu.Style().SetColor(giu.StyleColorText, second.color).To(
+			giu.Labelf("%s", second.name)))
+		driver2Row = append(driver2Row, giu.Labelf("%d", second.position))
+	} else {
+		driver2Row = append(driver2Row, giu.Label(""))
+		driver2Row = append(driver2Row, giu.Label(""))
+	}
 
 	driver3Row := []giu.Widget{}
 
