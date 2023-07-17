@@ -17,14 +17,15 @@ package panel
 
 import (
 	"fmt"
-	"github.com/AllenDang/giu"
-	"github.com/f1gopher/f1gopherlib"
-	"github.com/f1gopher/f1gopherlib/Messages"
-	"golang.org/x/image/colornames"
 	"image/color"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/AllenDang/giu"
+	"github.com/f1gopher/f1gopherlib"
+	"github.com/f1gopher/f1gopherlib/Messages"
+	"golang.org/x/image/colornames"
 )
 
 type timing struct {
@@ -194,7 +195,7 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 		for s := 0; s < totalSegments; s++ {
 			switch drivers[x].Segment[s] {
 			case Messages.None:
-				segments = append(segments, giu.Style().SetColor(giu.StyleColorText, colornames.Lightgray).To(
+				segments = append(segments, giu.Style().SetColor(giu.StyleColorText, color.RGBA{R: 230, G: 230, B: 230, A: 80}).To(
 					giu.Label("■")))
 			default:
 				segments = append(segments, giu.Style().SetColor(giu.StyleColorText, segmentColor(drivers[x].Segment[s])).To(

@@ -17,14 +17,15 @@ package panel
 
 import (
 	"fmt"
+	"image/color"
+	"math"
+	"sort"
+
 	"github.com/AllenDang/giu"
 	"github.com/AllenDang/imgui-go"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
 	"github.com/ungerik/go-cairo"
-	"image/color"
-	"math"
-	"sort"
 )
 
 type gapperPlotInfo struct {
@@ -58,6 +59,7 @@ type gapperPlot struct {
 }
 
 const NothingSelected = -1
+const NoDriver = 0
 
 func CreateGapperPlot() Panel {
 	panel := &gapperPlot{

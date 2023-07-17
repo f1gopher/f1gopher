@@ -2,13 +2,14 @@ package panel
 
 import (
 	"fmt"
+	"image/color"
+	"sort"
+	"time"
+
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
 	"golang.org/x/image/colornames"
-	"image/color"
-	"sort"
-	"time"
 )
 
 type catchingInfo struct {
@@ -141,7 +142,7 @@ func (c *catching) ProcessTiming(data Messages.Timing) {
 	// We don't get a lap time for the first lap
 	if len(driverInfo.lapTimes) == 0 || data.Lap == len(driverInfo.lapTimes)+1 {
 		// Pad with the lap we never got
-		if data.Lap == 2 {
+		for x := len(driverInfo.lapTimes); x < data.Lap-1; x++ {
 			driverInfo.lapTimes = append(driverInfo.lapTimes, 0)
 		}
 
@@ -282,13 +283,21 @@ func (c *catching) Draw(width int, height int) (widgets []giu.Widget) {
 
 func (c *catching) driverComparison(driver1Number int, driver2Number int, driver3Number int, mode trackerType) ([]*giu.TableColumnWidget, []*giu.TableRowWidget) {
 	driver1 := c.driverData[driver1Number]
-	driver2 := c.driverData[driver2Number]
+	var driver2 *catchingInfo = nil
 	var driver3 *catchingInfo = nil
 	// For infront and behind the driver1 is the focussed driver and should be in the middle
 	if mode == CarInfrontBehind {
-		driver1 = c.driverData[driver2Number]
+		if driver2Number != NoDriver {
+			driver1 = c.driverData[driver2Number]
+		} else {
+			driver1 = nil
+		}
 		driver2 = c.driverData[driver1Number]
-		driver3 = c.driverData[driver3Number]
+		if driver3Number != NoDriver {
+			driver3 = c.driverData[driver3Number]
+		}
+	} else {
+		driver2 = c.driverData[driver2Number]
 	}
 
 	first := driver1
@@ -347,7 +356,7 @@ func (c *catching) driverComparison(driver1Number int, driver2Number int, driver
 			}
 
 			topRow = append(topRow, giu.TableColumn(fmt.Sprintf("%d", x)).InnerWidthOrWeight(defaultColumnWidth))
-			if len(second.lapTimes) < x {
+			if first == nil || len(second.lapTimes) < x {
 				driver1Row = append(driver1Row, giu.Label("-"))
 			} else {
 				gap := fmtDuration(first.lapTimes[x-1] - second.lapTimes[x-1])
@@ -359,7 +368,7 @@ func (c *catching) driverComparison(driver1Number int, driver2Number int, driver
 					giu.Labelf("%s", gap)))
 			}
 
-			if len(first.lapTimes) < x || len(second.lapTimes) < x {
+			if first == nil || len(first.lapTimes) < x || len(second.lapTimes) < x {
 				driver2Row = append(driver2Row, giu.Label("-"))
 			} else {
 				driver2Row = append(driver2Row, giu.Labelf("%s", fmtDuration(second.lapTimes[x-1])))
@@ -408,7 +417,10 @@ func (c *catching) driverComparison(driver1Number int, driver2Number int, driver
 		}
 	}
 
-	gap := second.gapToLeader - first.gapToLeader
+	var gap time.Duration
+	if first != nil {
+		gap = second.gapToLeader - first.gapToLeader
+	}
 
 	topRow = append(topRow, giu.TableColumn("Gap").InnerWidthOrWeight(defaultColumnWidth))
 	if gap >= c.config.PredictedPitstopTime() {
@@ -424,15 +436,25 @@ func (c *catching) driverComparison(driver1Number int, driver2Number int, driver
 	}
 
 	topRow = append(topRow, giu.TableColumn("Tire").InnerWidthOrWeight(timeWidth))
-	driver1Row = append(driver1Row, giu.Style().SetColor(giu.StyleColorText, tireColor(first.tire)).To(giu.Label(first.tire.String())))
+	firstTire := "-"
+	var firstTireColor color.Color = color.RGBA{R: 255, G: 255, B: 255, A: 255}
+	firstLapsOnTire := "-"
+	if first != nil {
+		firstTire = first.tire.String()
+		firstTireColor = tireColor(first.tire)
+		firstLapsOnTire = fmt.Sprintf("%d", first.lapsOnTire)
+	}
+	driver1Row = append(driver1Row, giu.Style().SetColor(giu.StyleColorText, firstTireColor).To(giu.Label(firstTire)))
 	driver2Row = append(driver2Row, giu.Style().SetColor(giu.StyleColorText, tireColor(second.tire)).To(giu.Label(second.tire.String())))
 
 	topRow = append(topRow, giu.TableColumn("Laps On Tire").InnerWidthOrWeight(100))
-	driver1Row = append(driver1Row, giu.Labelf("%d", first.lapsOnTire))
+	driver1Row = append(driver1Row, giu.Label(firstLapsOnTire))
 	driver2Row = append(driver2Row, giu.Labelf("%d", second.lapsOnTire))
 
 	var rows []*giu.TableRowWidget
-	rows = append(rows, giu.TableRow(driver1Row...))
+	if first != nil {
+		rows = append(rows, giu.TableRow(driver1Row...))
+	}
 	rows = append(rows, giu.TableRow(driver2Row...))
 
 	if driver3 != nil {
@@ -516,8 +538,8 @@ func (c *catching) findCarInfrontAndBehind(currentDriver int) (front int, behind
 	}
 
 	currentPos := c.driverData[currentDriver].position
-	front = NothingSelected
-	behind = NothingSelected
+	front = NoDriver
+	behind = NoDriver
 
 	if currentPos != 1 {
 		front = c.driverOrder[currentPos-1]
