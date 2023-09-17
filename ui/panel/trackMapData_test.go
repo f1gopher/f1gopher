@@ -50,6 +50,12 @@ var fudge = map[string]fudgeFactors{
 	"Yas Marina Circuit":                          {rotation: 1.5708},
 }
 
+// When running remember to modify in f1gopherlib:
+//
+// 1) replay.go readEntries() ticker time -> Millisecond
+// 2) f1gopherlib.go increase channel sizes to 10000
+// 3) replay.go CreateReplay() dataFeed channel size -> 100000
+
 func TestCreateTrackMaps(t *testing.T) {
 	mapStore := CreateTrackMapStore()
 	mapStore.tracks = map[string][]*trackInfo{}
@@ -89,7 +95,7 @@ func TestCreateTrackMaps(t *testing.T) {
 			continue
 		}
 
-		if session.TrackName == "Marina Bay Street Circuit" {
+		if session.TrackName == "Marina Bay Street Circuit" && session.EventTime.Year() != 2023 {
 			mapStore.targetDriver = 5
 		} else if session.TrackName == "Bahrain International Circuit - Outer Track" {
 			mapStore.targetDriver = 0

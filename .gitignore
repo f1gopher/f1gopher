@@ -23,3 +23,4 @@ go.work
 default.pgo
 f1gopher
 f1gopher-*.zip
+go.work.sum
