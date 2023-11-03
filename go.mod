@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/AllenDang/giu v0.6.2
-	github.com/f1gopher/f1gopherlib v0.9.1-0.20231008161148-fcd5da7bc3ed
+	github.com/f1gopher/f1gopherlib v0.9.1-0.20231103180152-6e6c5064f534
 	github.com/hajimehoshi/go-mp3 v0.3.4
 	github.com/hajimehoshi/oto/v2 v2.3.1
 	golang.org/x/image v0.0.0-20220302094943-723b81ca9867
