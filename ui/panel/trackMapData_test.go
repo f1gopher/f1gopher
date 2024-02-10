@@ -48,6 +48,7 @@ var fudge = map[string]fudgeFactors{
 	"Sochi Autodrom":                              {rotation: 0.0},
 	"Suzuka Circuit":                              {rotation: 0.0},
 	"Yas Marina Circuit":                          {rotation: 1.5708},
+	"Las Vegas Strip Street Circuit":              {rotation: -1.5708},
 }
 
 // When running remember to modify in f1gopherlib:
@@ -74,6 +75,11 @@ func TestCreateTrackMaps(t *testing.T) {
 		}
 
 		if session.Type != Messages.RaceSession {
+			continue
+		}
+
+		// No data
+		if session.EventTime.Year() == 2022 && session.TrackName == "Autodromo Enzo e Dino Ferrari" {
 			continue
 		}
 
