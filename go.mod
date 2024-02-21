@@ -1,6 +1,6 @@
 module f1gopher
 
-go 1.20
+go 1.22
 
 require (
 	github.com/AllenDang/giu v0.6.2
