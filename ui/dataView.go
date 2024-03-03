@@ -133,10 +133,10 @@ func (d *dataView) newLayout(width int, height int) {
 	defer d.closeWg.Done()
 
 	var gap float32 = 5.0
-	var timingWidth float32 = 1415
+	var timingWidth float32 = 1300
 	var timingHeight float32 = 430
 	const weatherWidth float32 = 170
-	var trackMapWidth float32 = 1000
+	var trackMapWidth float32 = 900
 	var rcmWidth float32 = float32(width) - (timingWidth + gap)
 
 	// For none race session we don't display some panels
