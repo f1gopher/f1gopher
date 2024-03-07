@@ -17,10 +17,11 @@ package panel
 
 import (
 	"fmt"
-	"github.com/f1gopher/f1gopherlib/Messages"
-	"golang.org/x/image/colornames"
 	"image/color"
 	"time"
+
+	"github.com/f1gopher/f1gopherlib/Messages"
+	"golang.org/x/image/colornames"
 )
 
 func fmtDuration(d time.Duration) string {
@@ -50,15 +51,47 @@ func fmtDuration(d time.Duration) string {
 	}
 
 	if isNegative {
-		return fmt.Sprintf("-%02d:%02d.%03d", minutes, seconds, milliseconds)
+		// If no minutes then don't display zero but pad with spaces for display alignment
+		if minutes == 0 {
+			return fmt.Sprintf("-   %01d.%03d", seconds, milliseconds)
+		}
+
+		return fmt.Sprintf("-%01d:%02d.%03d", minutes, seconds, milliseconds)
 	}
 
 	// If no minutes then don't display zero but pad with spaces for display alignment
 	if minutes == 0 {
-		return fmt.Sprintf("   %02d.%03d", seconds, milliseconds)
+		return fmt.Sprintf("   %01d.%03d", seconds, milliseconds)
 	}
 
-	return fmt.Sprintf("%02d:%02d.%03d", minutes, seconds, milliseconds)
+	return fmt.Sprintf("%01d:%02d.%03d", minutes, seconds, milliseconds)
+}
+
+func fmtDurationNoMins(d time.Duration) string {
+	milliseconds := d.Milliseconds()
+
+	if milliseconds == 0 {
+		return " 00.000"
+	}
+
+	seconds := milliseconds / 1000
+	milliseconds -= seconds * 1000
+
+	isNegative := false
+	if seconds < 0 {
+		seconds = -seconds
+		isNegative = true
+	}
+	if milliseconds < 0 {
+		milliseconds = -milliseconds
+		isNegative = true
+	}
+
+	if isNegative {
+		return fmt.Sprintf("-%02d.%03d", seconds, milliseconds)
+	}
+
+	return fmt.Sprintf(" %02d.%03d", seconds, milliseconds)
 }
 
 var purpleColor = color.RGBA{R: 213, G: 0, B: 213, A: 255}

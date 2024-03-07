@@ -1,10 +1,12 @@
 module f1gopher
 
-go 1.22
+go 1.21
+
+toolchain go1.21.0
 
 require (
 	github.com/AllenDang/giu v0.6.2
-	github.com/f1gopher/f1gopherlib v0.9.1-0.20240221103349-46ee8a99748c
+	github.com/f1gopher/f1gopherlib v0.9.1-0.20240210154143-4b91e49b13ef
 	github.com/hajimehoshi/go-mp3 v0.3.4
 	github.com/hajimehoshi/oto/v2 v2.3.1
 	golang.org/x/image v0.0.0-20220302094943-723b81ca9867

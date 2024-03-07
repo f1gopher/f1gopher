@@ -16,13 +16,16 @@
 package panel
 
 import (
+	"image/color"
 	"math"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
+	"golang.org/x/image/colornames"
 )
 
 type location struct {
@@ -44,42 +47,43 @@ type fastLapInfo struct {
 	markers          []timedLocation
 	estimatedLapTime time.Duration
 	actualLapTime    time.Duration
-	lapNumber        int
-	driverName       string
-	driverNumber     int
-	location         Messages.CarLocation
 
-	diffToFastest time.Duration
+	lapNumber    int
+	driverName   string
+	driverNumber int
+	driverColor  color.RGBA
+	position     int
+	location     Messages.CarLocation
+
+	diffToPole         time.Duration
+	diffToPersonalBest time.Duration
 }
 
 type improving struct {
 	dataSrc f1gopherlib.F1GopherLib
 
 	fastestDriverNum int
-	// fastestOnQualiLap    bool
-	// fastLapStartTime     time.Time
-	// fastLapNumber        int
-	// recording            bool
-	fastestLap *fastLapInfo
-	// fastLapTime          time.Duration
-	// prevDistanceToTarget float64
-	// prevLocation         Messages.Location
+	fastestLap       *fastLapInfo
 
 	driverCurrentLaps map[int]*fastLapInfo
-
-	compareDriverNum int
+	driverFastestLaps map[int]*fastLapInfo
 
 	startLine location
 
-	sortedDriverNames []int
+	sortedDrivers []*fastLapInfo
+	session       Messages.EventType
+
+	lock  sync.Mutex
+	table *giu.TableWidget
 }
 
 func CreateImproving() Panel {
-	return &improving{}
+	return &improving{
+		lock: sync.Mutex{},
+	}
 }
 
 func (i *improving) ProcessEventTime(data Messages.EventTime)                    {}
-func (i *improving) ProcessEvent(data Messages.Event)                            {}
 func (i *improving) ProcessWeather(data Messages.Weather)                        {}
 func (i *improving) ProcessRadio(data Messages.Radio)                            {}
 func (i *improving) ProcessTelemetry(data Messages.Telemetry)                    {}
@@ -92,34 +96,57 @@ func (i *improving) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	i.dataSrc = dataSrc
 	i.startLine = location{x: -386, y: 1170}
 	i.driverCurrentLaps = make(map[int]*fastLapInfo)
+	i.driverFastestLaps = make(map[int]*fastLapInfo)
+	i.table = nil
+	i.session = Messages.Qualifying0
+	i.sortedDrivers = make([]*fastLapInfo, 0)
+	i.fastestDriverNum = 0
+	i.fastestLap = nil
+
+}
+
+func (i *improving) ProcessEvent(data Messages.Event) {
+	// Reset times when the session changes
+	if data.Type != i.session {
+		i.session = data.Type
+
+		// Reset driver info's
+		for _, driverInfo := range i.driverCurrentLaps {
+			driverInfo.diffToPole = 0
+			driverInfo.diffToPersonalBest = 0
+			driverInfo.markers = []timedLocation{}
+			driverInfo.prevDistanceToStartLine = math.MaxFloat64
+			driverInfo.isRecording = false
+		}
+
+		i.fastestLap = nil
+		i.updateTable()
+	}
 }
 
 func (i *improving) ProcessDrivers(data Messages.Drivers) {
 
-	i.sortedDriverNames = []int{}
+	i.sortedDrivers = []*fastLapInfo{}
 
 	for x := range data.Drivers {
-		i.driverCurrentLaps[data.Drivers[x].Number] = &fastLapInfo{
-			driverName:              data.Drivers[x].Name,
+		info := &fastLapInfo{
+			driverName:              data.Drivers[x].ShortName,
 			driverNumber:            data.Drivers[x].Number,
+			driverColor:             data.Drivers[x].Color,
+			position:                data.Drivers[x].StartPosition,
 			isRecording:             false,
 			prevDistanceToStartLine: math.MaxFloat64,
 		}
 
-		i.sortedDriverNames = append(i.sortedDriverNames, data.Drivers[x].Number)
-
-		if data.Drivers[x].ShortName == "SAI" {
-			i.fastestDriverNum = data.Drivers[x].Number
-			continue
-		}
-
-		if data.Drivers[x].ShortName == "HAM" {
-			i.compareDriverNum = data.Drivers[x].Number
-			continue
-		}
+		i.driverCurrentLaps[data.Drivers[x].Number] = info
+		i.sortedDrivers = append(i.sortedDrivers, info)
 	}
 
-	i.sortedDriverNames = sort.IntSlice(i.sortedDriverNames)
+	sort.Slice(
+		i.sortedDrivers,
+		func(x int, y int) bool {
+			return i.sortedDrivers[x].position < i.sortedDrivers[y].position
+		})
 }
 
 func (i *improving) ProcessTiming(data Messages.Timing) {
@@ -130,19 +157,42 @@ func (i *improving) ProcessTiming(data Messages.Timing) {
 	driverInfo := i.driverCurrentLaps[data.Number]
 
 	driverInfo.location = data.Location
+	if driverInfo.position != data.Position {
+		driverInfo.position = data.Position
+		sort.Slice(
+			i.sortedDrivers,
+			func(x int, y int) bool {
+				return i.sortedDrivers[x].position < i.sortedDrivers[y].position
+			})
+		i.updateTable()
+	}
 }
 
 func (i *improving) ProcessLocation(data Messages.Location) {
+	if data.DriverNumber == 0 {
+		return
+	}
 
 	driverInfo := i.driverCurrentLaps[data.DriverNumber]
 
 	// Only need to update if the driver is on a fast lap or outlap
 	if driverInfo.location != Messages.OutLap && driverInfo.location != Messages.OnTrack {
+		// Clear any existing info when not on track
+		if driverInfo.diffToPole != 0 {
+			driverInfo.diffToPole = 0
+			driverInfo.diffToPersonalBest = 0
+			driverInfo.markers = []timedLocation{}
+			driverInfo.prevDistanceToStartLine = math.MaxFloat64
+			driverInfo.isRecording = false
+			i.updateTable()
+		}
+
 		return
 	}
 
 	pos := location{x: data.X, y: data.Y}
 	distToStart := distance(i.startLine, pos)
+	update := false
 
 	// If the distance to start is above a threshold then do nothing
 	if distToStart < 400 {
@@ -173,8 +223,12 @@ func (i *improving) ProcessLocation(data Messages.Location) {
 		} else {
 			// we are recording so check if we need to stop
 
-			// If getting closer to target
-			if distToStart < driverInfo.prevDistanceToStartLine {
+			// If we are past the start then ignore distance changes so we don't end the lap early
+			if len(driverInfo.markers) < 20 {
+				return
+			} else if distToStart < driverInfo.prevDistanceToStartLine {
+				// If getting closer to target
+
 				// We don't know if we are there yet but are gettign closer
 				// so do nothing yet
 				driverInfo.prevDistanceToStartLine = distToStart
@@ -192,19 +246,27 @@ func (i *improving) ProcessLocation(data Messages.Location) {
 
 				// Store the overall fastest lap info
 				if i.fastestLap == nil || i.fastestLap.estimatedLapTime > driverInfo.estimatedLapTime {
-					i.fastestLap = driverInfo
+					// Needs to be a copy
+					tmp := *driverInfo
+					i.fastestLap = &tmp
+					update = true
+				}
+
+				// Update the drivers personal best lap info
+				driverFastestLap := i.driverFastestLaps[driverInfo.driverNumber]
+				if driverFastestLap == nil || driverFastestLap.estimatedLapTime > driverInfo.estimatedLapTime {
+					// Needs to be a copy
+					tmp := *driverInfo
+					i.driverFastestLaps[driverInfo.driverNumber] = &tmp
+					update = true
 				}
 
 				// Reset driver tracking
-				i.driverCurrentLaps[data.DriverNumber] = &fastLapInfo{
-					markers:                 []timedLocation{},
-					lapStartTime:            timeBetweenTwoPoints(i.startLine, driverInfo.prevLocation, data),
-					prevDistanceToStartLine: math.MaxFloat64,
-					prevLocation:            data,
-					isRecording:             true,
-					driverNumber:            driverInfo.driverNumber,
-					driverName:              driverInfo.driverName,
-				}
+				driverInfo.markers = []timedLocation{}
+				driverInfo.lapStartTime = timeBetweenTwoPoints(i.startLine, driverInfo.prevLocation, data)
+				driverInfo.prevDistanceToStartLine = math.MaxFloat64
+				driverInfo.prevLocation = data
+				driverInfo.isRecording = true
 
 				return
 			}
@@ -220,79 +282,145 @@ func (i *improving) ProcessLocation(data Messages.Location) {
 
 		// Update the diff to current fastest
 		if i.fastestLap != nil {
-			currentMarker := driverInfo.markers[len(driverInfo.markers)-1]
-			smallestDistance := math.MaxFloat64
-			var smallestIndex int
-			// Find the fastest lap point before to the most recent point
-			for x := 0; x < len(i.fastestLap.markers); x++ {
-
-				currentDistance := distance(i.fastestLap.markers[x].pos, currentMarker.pos)
-				if currentDistance < smallestDistance {
-					smallestDistance = currentDistance
-					smallestIndex = x
-				}
-			}
-
-			// TODO - do index range checks
-			if smallestIndex == 0 || smallestIndex == len(i.fastestLap.markers)-1 {
-				return
-			}
-
-			// Find the second closest point (is it before or after?e
-			beforeDist := distance(i.fastestLap.markers[smallestIndex-1].pos, currentMarker.pos)
-			afterDist := distance(i.fastestLap.markers[smallestIndex+1].pos, currentMarker.pos)
-
-			// Current is between before and smallest
-			var start, end timedLocation
-			if beforeDist < afterDist {
-				start = i.fastestLap.markers[smallestIndex-1]
-				end = i.fastestLap.markers[smallestIndex]
-			} else {
-				start = i.fastestLap.markers[smallestIndex]
-				end = i.fastestLap.markers[smallestIndex+1]
-			}
-
-			// Normalize the recent point back to the fastest point
-			timeDiff := timeBetweenTwoPoints(pos,
-				Messages.Location{X: start.pos.x, Y: start.pos.y, Timestamp: i.fastestLap.lapStartTime.Add(start.timestamp)},
-				Messages.Location{X: end.pos.x, Y: end.pos.y, Timestamp: i.fastestLap.lapStartTime.Add(end.timestamp)})
-			fastestElapsed := timeDiff.Sub(i.fastestLap.lapStartTime)
-
-			// Update time diff
-			elapsedLapTime := currentMarker.timestamp
-			driverInfo.diffToFastest = elapsedLapTime - fastestElapsed
+			driverInfo.diffToPole = i.diffToLap(pos, driverInfo, i.fastestLap)
+			update = true
 		}
+
+		driverFastest := i.driverFastestLaps[driverInfo.driverNumber]
+		if driverFastest != nil {
+			driverInfo.diffToPersonalBest = i.diffToLap(pos, driverInfo, driverFastest)
+			update = true
+		}
+	}
+
+	if update {
+		i.updateTable()
 	}
 }
 
-func (i *improving) Draw(width int, height int) []giu.Widget {
+func (i *improving) diffToLap(pos location, driverInfo *fastLapInfo, benchmark *fastLapInfo) time.Duration {
+
+	currentMarker := driverInfo.markers[len(driverInfo.markers)-1]
+	smallestDistance := math.MaxFloat64
+	var smallestIndex int
+	// Find the fastest lap point before to the most recent point
+	for x := 0; x < len(benchmark.markers); x++ {
+
+		currentDistance := distance(benchmark.markers[x].pos, currentMarker.pos)
+		if currentDistance < smallestDistance {
+			smallestDistance = currentDistance
+			smallestIndex = x
+		}
+	}
+
+	// TODO - do index range checks
+	if smallestIndex == 0 || smallestIndex == len(benchmark.markers)-1 {
+		return 0
+	}
+
+	// Find the second closest point (is it before or after?e
+	beforeDist := distance(benchmark.markers[smallestIndex-1].pos, currentMarker.pos)
+	afterDist := distance(benchmark.markers[smallestIndex+1].pos, currentMarker.pos)
+
+	// Current is between before and smallest
+	var start, end timedLocation
+	if beforeDist < afterDist {
+		start = benchmark.markers[smallestIndex-1]
+		end = benchmark.markers[smallestIndex]
+	} else {
+		start = benchmark.markers[smallestIndex]
+		end = benchmark.markers[smallestIndex+1]
+	}
+
+	// Normalize the recent point back to the fastest point
+	timeDiff := timeBetweenTwoPoints(pos,
+		Messages.Location{X: start.pos.x, Y: start.pos.y, Timestamp: benchmark.lapStartTime.Add(start.timestamp)},
+		Messages.Location{X: end.pos.x, Y: end.pos.y, Timestamp: benchmark.lapStartTime.Add(end.timestamp)})
+	fastestElapsed := timeDiff.Sub(benchmark.lapStartTime)
+
+	// Update time diff
+	elapsedLapTime := currentMarker.timestamp
+	return elapsedLapTime - fastestElapsed
+}
+
+func (i *improving) updateTable() {
 	if i.fastestLap == nil {
+		return
+	}
+
+	rows := []*giu.TableRowWidget{}
+
+	for _, driver := range i.sortedDrivers {
+		parts := []giu.Widget{
+			giu.Labelf("%d", driver.position),
+			giu.Style().SetColor(giu.StyleColorText, driver.driverColor).To(giu.Label(driver.driverName)),
+		}
+
+		if driver.location == Messages.OnTrack {
+			timeColor := colornames.White
+			if driver.diffToPersonalBest > 0 {
+				timeColor = colornames.Red
+			} else if driver.diffToPersonalBest < 0 {
+				timeColor = colornames.Green
+			}
+
+			parts = append(parts,
+				giu.Style().SetColor(
+					giu.StyleColorText, timeColor).
+					To(giu.Label(fmtDurationNoMins(driver.diffToPersonalBest))))
+
+			timeColor = colornames.White
+			if driver.diffToPole > 0 {
+				timeColor = colornames.Red
+			} else if driver.diffToPole < 0 {
+				timeColor = colornames.Green
+			}
+
+			parts = append(parts,
+				giu.Style().SetColor(
+					giu.StyleColorText, timeColor).
+					To(giu.Label(fmtDurationNoMins(driver.diffToPole))))
+
+		} else {
+			parts = append(parts, giu.Label("      -"))
+			parts = append(parts, giu.Label("      -"))
+		}
+
+		rows = append(rows, giu.TableRow(parts...))
+	}
+
+	result := giu.Table().Flags(giu.TableFlagsResizable|giu.TableFlagsSizingFixedSame).
+		Columns(
+			giu.TableColumn("Pos").InnerWidthOrWeight(50),
+			giu.TableColumn("Driver").InnerWidthOrWeight(70),
+			giu.TableColumn("Personal Δ").InnerWidthOrWeight(100),
+			giu.TableColumn("Pole Δ").InnerWidthOrWeight(100),
+		).Rows(rows...)
+
+	i.lock.Lock()
+	i.table = result
+	i.lock.Unlock()
+}
+
+func (i *improving) Draw(width int, height int) []giu.Widget {
+	// If it's the first session and we have no fast lap then display nothing
+	// any session after the frist won't have a fastest but will have personal
+	// laps from the first session so we can display something
+	if i.fastestLap == nil && i.session == Messages.Qualifying1 || i.table == nil {
 		return []giu.Widget{
 			giu.Label("Waiting for first fast lap..."),
 		}
 	}
 
 	results := []giu.Widget{}
-	results = append(results, giu.Labelf("Fastest: %s %v", i.fastestLap.driverName, fmtDuration(i.fastestLap.estimatedLapTime)))
-
-	for _, driverNum := range i.sortedDriverNames {
-		driver := i.driverCurrentLaps[driverNum]
-		if driver.location == Messages.OnTrack {
-			results = append(results, giu.Labelf("%s - %v", driver.driverName, fmtDuration(driver.diffToFastest)))
-		}
+	i.lock.Lock()
+	results = append(results, i.table)
+	i.lock.Unlock()
+	if i.fastestLap != nil {
+		results = append(results, giu.Labelf("Fastest: %s %v", i.fastestLap.driverName, fmtDuration(i.fastestLap.estimatedLapTime)))
 	}
 
 	return results
-
-	// return []giu.Widget{
-	// 	giu.Labelf("Fast Driver On Quali Lap: %s", i.fastestLap.driverName),
-	// 	giu.Labelf("Fast Lap Start Time: %v", i.fastestLap.lapStartTime),
-	// 	giu.Labelf("Location Count: %d", len(i.fastestLap.markers)),
-	// 	//		 giu.Labelf("Recording: %t", i.recording),
-	// 	giu.Labelf("Fast Lap Time: %v", i.fastestLap.estimatedLapTime),
-	// 	//		 giu.Labelf("Prev Distance To Target: %f", i.prevDistanceToTarget),
-	// 	giu.Labelf("LeClerc Diff: %v", i.driverCurrentLaps[16].diffToFastest),
-	// }
 }
 
 func distance(a location, b location) float64 {

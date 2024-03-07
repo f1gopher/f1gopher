@@ -141,7 +141,7 @@ func (d *dataView) newLayout(width int, height int) {
 
 	// For none race session we don't display some panels
 	if d.dataSrc.Session() == Messages.QualifyingSession {
-		timingWidth = float32(width - 750)
+		timingWidth = float32(width - 450)
 		trackMapWidth = (float32(width) - gap) / 2.0
 		rcmWidth = trackMapWidth
 	} else if d.dataSrc.Session() != Messages.RaceSession && d.dataSrc.Session() != Messages.SprintSession {

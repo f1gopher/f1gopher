@@ -58,7 +58,7 @@ type timing struct {
 	table *giu.TableWidget
 }
 
-const timeWidth = 75
+const timeWidth = 70
 
 var outBackground = color.RGBA{R: 69, G: 69, B: 228, A: 255}
 var dropZoneBackground = color.RGBA{R: 83, G: 84, B: 78, A: 255}
@@ -112,10 +112,10 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 		giu.TableColumn("Driver").InnerWidthOrWeight(41),
 		giu.TableColumn("Segment").InnerWidthOrWeight(240),
 		giu.TableColumn("Fastest").InnerWidthOrWeight(timeWidth),
-		giu.TableColumn("Gap").InnerWidthOrWeight(60),
-		giu.TableColumn("S1").InnerWidthOrWeight(60),
-		giu.TableColumn("S2").InnerWidthOrWeight(60),
-		giu.TableColumn("S3").InnerWidthOrWeight(60),
+		giu.TableColumn("Gap").InnerWidthOrWeight(timeWidth),
+		giu.TableColumn("S1").InnerWidthOrWeight(timeWidth),
+		giu.TableColumn("S2").InnerWidthOrWeight(timeWidth),
+		giu.TableColumn("S3").InnerWidthOrWeight(timeWidth),
 		giu.TableColumn("Last Lap").InnerWidthOrWeight(timeWidth),
 		giu.TableColumn("DRS").InnerWidthOrWeight(50),
 		giu.TableColumn("Tire").InnerWidthOrWeight(50),
