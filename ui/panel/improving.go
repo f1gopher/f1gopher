@@ -60,15 +60,18 @@ type fastLapInfo struct {
 }
 
 type improving struct {
-	dataSrc f1gopherlib.F1GopherLib
+	dataSrc            f1gopherlib.F1GopherLib
+	startLineLocations map[string]location
 
 	fastestDriverNum int
 	fastestLap       *fastLapInfo
 
 	driverCurrentLaps map[int]*fastLapInfo
 	driverFastestLaps map[int]*fastLapInfo
+	//lastDriverPos     map[int]location
 
-	startLine location
+	startLine        location
+	lastSegmentIndex int
 
 	sortedDrivers []*fastLapInfo
 	session       Messages.EventType
@@ -80,6 +83,10 @@ type improving struct {
 func CreateImproving() Panel {
 	return &improving{
 		lock: sync.Mutex{},
+		startLineLocations: map[string]location{
+			"Bahrain International Circuit": {x: -386, y: 1170},
+			"Jeddah Corniche Circuit":       {x: -1673, y: 1259},
+		},
 	}
 }
 
@@ -94,18 +101,33 @@ func (i *improving) Type() Type { return QualifyingImproving }
 
 func (i *improving) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	i.dataSrc = dataSrc
-	i.startLine = location{x: -386, y: 1170}
+	i.selectTrack(dataSrc.Track())
 	i.driverCurrentLaps = make(map[int]*fastLapInfo)
 	i.driverFastestLaps = make(map[int]*fastLapInfo)
+	// i.lastDriverPos = make(map[int]location)
 	i.table = nil
 	i.session = Messages.Qualifying0
 	i.sortedDrivers = make([]*fastLapInfo, 0)
 	i.fastestDriverNum = 0
 	i.fastestLap = nil
+	i.lastSegmentIndex = 0
 
 }
 
+func (i *improving) selectTrack(name string) {
+	loc, exists := i.startLineLocations[name]
+	if exists {
+		i.startLine = loc
+		return
+	}
+
+	// Default
+	i.startLine = location{}
+}
+
 func (i *improving) ProcessEvent(data Messages.Event) {
+	//i.lastSegmentIndex = (data.Sector1Segments + data.Sector2Segments + data.Sector3Segments) - 1
+
 	// Reset times when the session changes
 	if data.Type != i.session {
 		i.session = data.Type
@@ -140,6 +162,7 @@ func (i *improving) ProcessDrivers(data Messages.Drivers) {
 
 		i.driverCurrentLaps[data.Drivers[x].Number] = info
 		i.sortedDrivers = append(i.sortedDrivers, info)
+		//	i.lastDriverPos[data.Drivers[x].Number] = location{}
 	}
 
 	sort.Slice(
@@ -153,6 +176,18 @@ func (i *improving) ProcessTiming(data Messages.Timing) {
 	if len(i.driverCurrentLaps) == 0 {
 		return
 	}
+
+	// if i.startLine.x == 0 && i.startLine.y == 0 && i.lastSegmentIndex != -1 {
+	// 	segment := data.Segment[i.lastSegmentIndex]
+	// 	if data.Location == Messages.OnTrack || data.Location == Messages.OutLap &&
+	// 		segment == Messages.InvalidSegment && segment != Messages.PitlaneSegment {
+	// 		i.startLine = i.lastDriverPos[data.Number]
+	// 	} else {
+	// 		return
+	// 	}
+	// } else {
+	// 	return
+	// }
 
 	driverInfo := i.driverCurrentLaps[data.Number]
 
@@ -172,6 +207,11 @@ func (i *improving) ProcessLocation(data Messages.Location) {
 	if data.DriverNumber == 0 {
 		return
 	}
+
+	// if i.startLine.x == 0 && i.startLine.y == 0 {
+	// 	i.lastDriverPos[data.DriverNumber] = location{x: data.X, y: data.Y}
+	// 	return
+	// }
 
 	driverInfo := i.driverCurrentLaps[data.DriverNumber]
 
@@ -357,19 +397,24 @@ func (i *improving) updateTable() {
 		}
 
 		if driver.location == Messages.OnTrack {
-			timeColor := colornames.White
-			if driver.diffToPersonalBest > 0 {
-				timeColor = colornames.Red
-			} else if driver.diffToPersonalBest < 0 {
-				timeColor = colornames.Green
+			// Show comparison to personal best if the driver has a stored fast lap
+			if _, exists := i.driverFastestLaps[driver.driverNumber]; exists {
+				timeColor := colornames.White
+				if driver.diffToPersonalBest > 0 {
+					timeColor = colornames.Red
+				} else if driver.diffToPersonalBest < 0 {
+					timeColor = colornames.Green
+				}
+
+				parts = append(parts,
+					giu.Style().SetColor(
+						giu.StyleColorText, timeColor).
+						To(giu.Label(fmtDurationNoMins(driver.diffToPersonalBest))))
+			} else {
+				parts = append(parts, giu.Label("      -"))
 			}
 
-			parts = append(parts,
-				giu.Style().SetColor(
-					giu.StyleColorText, timeColor).
-					To(giu.Label(fmtDurationNoMins(driver.diffToPersonalBest))))
-
-			timeColor = colornames.White
+			timeColor := colornames.White
 			if driver.diffToPole > 0 {
 				timeColor = colornames.Red
 			} else if driver.diffToPole < 0 {
@@ -408,7 +453,7 @@ func (i *improving) Draw(width int, height int) []giu.Widget {
 	// laps from the first session so we can display something
 	if i.fastestLap == nil && i.session == Messages.Qualifying1 || i.table == nil {
 		return []giu.Widget{
-			giu.Label("Waiting for first fast lap..."),
+			giu.Label("Waiting for the first fast lap..."),
 		}
 	}
 

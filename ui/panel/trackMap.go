@@ -254,19 +254,6 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 			t.mapGc.Stroke()
 		}
 
-		startX := -386.0
-		startY := 1170.0
-		tmpX := -(startX - float64(xOffset))
-		tmpY := startY - float64(yOffset)
-		startX = tmpX*c - tmpY*s
-		startY = tmpX*s + tmpY*c
-		startX = startX / scaling
-		startY = startY / scaling
-		t.mapGc.MoveTo(startX, startY)
-		t.mapGc.SetSourceRGBA(1.0, 0.0, 0.0, 1.0)
-		t.mapGc.Rectangle(startX-2, startY-2, 4, 4)
-		t.mapGc.Stroke()
-
 		// Convert image to texture and release any previous texture
 		trueImg := t.mapGc.GetImage()
 		rgba := image.NewRGBA(trueImg.Bounds())
