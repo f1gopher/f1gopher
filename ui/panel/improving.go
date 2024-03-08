@@ -43,6 +43,7 @@ type fastLapInfo struct {
 	prevLocation            Messages.Location
 	lapStartTime            time.Time
 	isRecording             bool
+	displayDriver           bool
 
 	markers          []timedLocation
 	estimatedLapTime time.Duration
@@ -167,6 +168,16 @@ func (i *improving) ProcessEvent(data Messages.Event) {
 			driverInfo.markers = []timedLocation{}
 			driverInfo.prevDistanceToStartLine = math.MaxFloat64
 			driverInfo.isRecording = false
+
+			// Don't display drivers who are out of qualifying
+			switch data.Type {
+			case Messages.Qualifying1:
+				driverInfo.displayDriver = driverInfo.location != Messages.Stopped
+			case Messages.Qualifying2:
+				driverInfo.displayDriver = driverInfo.position <= 15 && driverInfo.location != Messages.Stopped
+			case Messages.Qualifying3:
+				driverInfo.displayDriver = driverInfo.position <= 10 && driverInfo.location != Messages.Stopped
+			}
 		}
 
 		i.fastestLap = nil
@@ -186,6 +197,7 @@ func (i *improving) ProcessDrivers(data Messages.Drivers) {
 			position:                data.Drivers[x].StartPosition,
 			isRecording:             false,
 			prevDistanceToStartLine: math.MaxFloat64,
+			displayDriver:           true,
 		}
 
 		i.driverCurrentLaps[data.Drivers[x].Number] = info
@@ -219,6 +231,10 @@ func (i *improving) ProcessTiming(data Messages.Timing) {
 
 	driverInfo := i.driverCurrentLaps[data.Number]
 
+	// If a driver has stopped don't display anything
+	if data.Location == Messages.Stopped {
+		driverInfo.displayDriver = false
+	}
 	driverInfo.location = data.Location
 	if driverInfo.position != data.Position {
 		driverInfo.position = data.Position
@@ -263,7 +279,7 @@ func (i *improving) ProcessLocation(data Messages.Location) {
 	update := false
 
 	// If the distance to start is above a threshold then do nothing
-	if distToStart < 400 {
+	if distToStart < 500 {
 		// If not recording then check if need to start
 		if !driverInfo.isRecording {
 			// If getting closer to target
@@ -424,14 +440,12 @@ func (i *improving) updateTable() {
 			giu.Style().SetColor(giu.StyleColorText, driver.driverColor).To(giu.Label(driver.driverName)),
 		}
 
-		if driver.location == Messages.OnTrack {
+		if driver.location == Messages.OnTrack && driver.displayDriver {
 			// Show comparison to personal best if the driver has a stored fast lap
 			if _, exists := i.driverFastestLaps[driver.driverNumber]; exists {
-				timeColor := colornames.White
-				if driver.diffToPersonalBest > 0 {
+				timeColor := colornames.Green
+				if driver.diffToPersonalBest >= 0 {
 					timeColor = colornames.Red
-				} else if driver.diffToPersonalBest < 0 {
-					timeColor = colornames.Green
 				}
 
 				parts = append(parts,
@@ -442,11 +456,9 @@ func (i *improving) updateTable() {
 				parts = append(parts, giu.Label("      -"))
 			}
 
-			timeColor := colornames.White
-			if driver.diffToPole > 0 {
+			timeColor := colornames.Green
+			if driver.diffToPole >= 0 {
 				timeColor = colornames.Red
-			} else if driver.diffToPole < 0 {
-				timeColor = colornames.Green
 			}
 
 			parts = append(parts,
@@ -455,8 +467,8 @@ func (i *improving) updateTable() {
 					To(giu.Label(fmtDurationNoMins(driver.diffToPole))))
 
 		} else {
-			parts = append(parts, giu.Label("      -"))
-			parts = append(parts, giu.Label("      -"))
+			parts = append(parts, giu.Label("       "))
+			parts = append(parts, giu.Label("       "))
 		}
 
 		rows = append(rows, giu.TableRow(parts...))
