@@ -109,7 +109,7 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	t.table = giu.Table().FastMode(true).Flags(giu.TableFlagsResizable | giu.TableFlagsSizingFixedSame)
 	columns := []*giu.TableColumnWidget{
 		giu.TableColumn("Pos").InnerWidthOrWeight(25),
-		giu.TableColumn("Driver").InnerWidthOrWeight(41),
+		giu.TableColumn("Drv").InnerWidthOrWeight(25),
 		giu.TableColumn("Segment").InnerWidthOrWeight(240),
 		giu.TableColumn("Fastest").InnerWidthOrWeight(timeWidth),
 		giu.TableColumn("Gap").InnerWidthOrWeight(timeWidth),
@@ -125,8 +125,8 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	if t.isRaceSession {
 		columns = append(columns, []*giu.TableColumnWidget{
 			giu.TableColumn("Pits").InnerWidthOrWeight(30),
-			giu.TableColumn("Pit Time").InnerWidthOrWeight(50),
-			giu.TableColumn("Post Pit Pos").InnerWidthOrWeight(100),
+			giu.TableColumn("Pit Time").InnerWidthOrWeight(60),
+			giu.TableColumn("Pit Pos").InnerWidthOrWeight(50),
 		}...)
 	} else if t.isSprintRaceSession {
 		columns = append(columns, []*giu.TableColumnWidget{
@@ -290,13 +290,7 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 				}
 
 				if drivers[x].Location != Messages.Stopped && drivers[x].Location != Messages.OutOfRace {
-					if newPosition == 1 {
-						potentialPositionChange = fmt.Sprintf("%02d>%s", newPosition, t.fmtGapDuration(timeToCarBehind))
-					} else if timeToCarBehind == 0 {
-						potentialPositionChange = fmt.Sprintf("%s<%02d", t.fmtGapDuration(timeToCarAhead), newPosition)
-					} else {
-						potentialPositionChange = fmt.Sprintf("%s<%02d>%s", t.fmtGapDuration(timeToCarAhead), newPosition, t.fmtGapDuration(timeToCarBehind))
-					}
+					potentialPositionChange = fmt.Sprintf("%02d", newPosition)
 				}
 
 				if newPosition != drivers[x].Position {

@@ -17,15 +17,16 @@ package panel
 
 import (
 	"fmt"
+	"runtime"
+	"strings"
+	"sync"
+	"sync/atomic"
+
 	"github.com/AllenDang/giu"
 	"github.com/AllenDang/imgui-go"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
 	"golang.org/x/image/colornames"
-	"runtime"
-	"strings"
-	"sync"
-	"sync/atomic"
 )
 
 func flagCharacter() string {
@@ -134,19 +135,14 @@ func (r *raceControlMessages) formatMessages() []giu.Widget {
 
 			if len(prefix) != 0 {
 				msgs = append(msgs,
-					giu.Style().SetStyleFloat(giu.StyleVarItemSpacing, 0).To(
-						giu.Row(
-							giu.Label(fmt.Sprintf("%s - ", r.rcMessages[x].Timestamp.In(r.dataSrc.CircuitTimezone()).
-								Format("15:04:05"))),
-							giu.Style().SetColor(giu.StyleColorText, color).To(giu.Label(prefix)),
-							giu.Label(r.rcMessages[x].Msg))),
-				)
+					giu.Style().SetColor(giu.StyleColorText, color).To(giu.Label(fmt.Sprintf("%s %s - %s", r.rcMessages[x].Timestamp.In(r.dataSrc.CircuitTimezone()).
+						Format("15:04:05"), prefix, r.rcMessages[x].Msg)).Wrapped(true)))
 			} else {
 				msgs = append(msgs,
 					giu.Label(
 						fmt.Sprintf("%s - %s",
 							r.rcMessages[x].Timestamp.In(r.dataSrc.CircuitTimezone()).
-								Format("15:04:05"), r.rcMessages[x].Msg)))
+								Format("15:04:05"), r.rcMessages[x].Msg)).Wrapped(true))
 			}
 		}
 	}

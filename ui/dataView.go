@@ -143,11 +143,11 @@ func (d *dataView) newLayout(width int, height int) {
 	if d.dataSrc.Session() == Messages.QualifyingSession {
 		timingWidth = float32(width - 450)
 		trackMapWidth = (float32(width) - gap) / 2.0
-		rcmWidth = trackMapWidth
+		rcmWidth = float32(width) - (trackMapWidth + gap)
 	} else if d.dataSrc.Session() != Messages.RaceSession && d.dataSrc.Session() != Messages.SprintSession {
 		timingWidth = float32(width)
 		trackMapWidth = (float32(width) - gap) / 2.0
-		rcmWidth = trackMapWidth
+		rcmWidth = float32(width) - (trackMapWidth + gap)
 	}
 
 	// CONTROLS
@@ -178,7 +178,7 @@ func (d *dataView) newLayout(width int, height int) {
 
 	if d.dataSrc.Session() == Messages.RaceSession || d.dataSrc.Session() == Messages.SprintSession {
 		w = giu.Window(panel.RaceControlMessages.String()).
-			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove|giu.WindowFlagsAlwaysHorizontalScrollbar|giu.WindowFlagsAlwaysVerticalScrollbar).
+			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove|giu.WindowFlagsAlwaysVerticalScrollbar).
 			Pos(timingWidth+gap, row1StartY).
 			Size(rcmWidth, timingHeight)
 		w.Layout(d.panels[panel.RaceControlMessages].Draw(0, 0)...)
@@ -207,9 +207,9 @@ func (d *dataView) newLayout(width int, height int) {
 		w.Layout(d.panels[panel.Catching].Draw(int(telemetryWidth), int(row2Height))...)
 	} else {
 		w = giu.Window(panel.RaceControlMessages.String()).
-			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove|giu.WindowFlagsAlwaysHorizontalScrollbar|giu.WindowFlagsAlwaysVerticalScrollbar).
+			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove|giu.WindowFlagsAlwaysVerticalScrollbar).
 			Pos(trackMapWidth+gap, row2StartY).
-			Size(telemetryWidth, row2Height)
+			Size(rcmWidth, row2Height)
 		w.Layout(d.panels[panel.RaceControlMessages].Draw(int(telemetryWidth), int(row2Height))...)
 	}
 }

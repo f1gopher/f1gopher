@@ -155,11 +155,11 @@ func (c *catching) Draw(width int, height int) (widgets []giu.Widget) {
 	blockWidgets := []giu.Widget{
 		giu.Row(
 			giu.ArrowButton(giu.DirectionLeft).OnClick(func() {
-				c.config.SetPredictedPitstopTime(c.config.PredictedPitstopTime() - (time.Millisecond * 100))
+				c.config.SetPredictedPitstopTime(c.config.PredictedPitstopTime() - (time.Millisecond * 500))
 			}),
 			giu.Labelf("Pitstop Time: %5s", c.config.PredictedPitstopTime()),
 			giu.ArrowButton(giu.DirectionRight).OnClick(func() {
-				c.config.SetPredictedPitstopTime(c.config.PredictedPitstopTime() + (time.Millisecond * 100))
+				c.config.SetPredictedPitstopTime(c.config.PredictedPitstopTime() + (time.Millisecond * 500))
 			}),
 			giu.Button("Add Tracker").OnClick(func() {
 				newBlock := catchingBlock{
