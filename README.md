@@ -42,15 +42,6 @@ It allows you to view timing, telemetry and location data and more from Formula 
 * Locations of all drivers in realtime
 * Location of the safety car when active
 
-### Weather View
-
-![](./imgs/weather.png)
-
-* Whether it is raining or not
-* Air and track temperature
-* Wind speed and direction
-* Air pressure and humidity
-
 ### Radio View
 
 * Plays the drivers radio messages as they happen
@@ -62,29 +53,17 @@ It allows you to view timing, telemetry and location data and more from Formula 
 
 * Displays all messages from race control
 
-### Telemetry View
+### Qualifying Session Improving View
 
-![](./imgs/telemetry.png)
+![](./imgs/qualifying_improving.png)
 
-* View live telemetry data for a selected driver
-* Choose from 6 channels of data to display:
-  * Throttle %
-  * Brake %
-  * RPM
-  * Gear
-  * Speed
-  * DRS
+* Shows how much each drivers current has improved compared to their best time and the current pole time
 
-### Race Position View - Race Sessions Only
+### Race Session Tracker View
 
-![](./imgs/race_position.png)
+![](./imgs/race_tracker.png)
 
-* See how a drivers position has changed over the course of a race session
-
-### Gapper Tool View - Race Sessions Only
-
-![](./imgs/gapper_plot.png)
-
-* View [Gapper Tool](https://www.schoolofraceengineering.co.uk/blog/post/15991/build-your-own-race-strategy-gapper-tool/) data used to help predict/plan strategies
-* Select a driver to use as the baseline
-* Select which drivers to display data for
+* Configurable view to track and compare lap times between pairs of drivers
+* Shows the tire compound and current gap between drivers
+* Shows the past 5 laps times and whether a driver is gaining or loosing time compared to the other driver
+* You can compare a driver to any other, the car infront, the car behind, the leader or their team mate
