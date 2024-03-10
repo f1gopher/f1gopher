@@ -108,25 +108,25 @@ func (r *raceControlMessages) formatMessages() []giu.Widget {
 			case Messages.GreenFlag:
 				color = colornames.Green
 				if strings.HasPrefix(r.rcMessages[x].Msg, "GREEN LIGHT") {
-					prefix = "● "
+					prefix = "●"
 				} else {
-					prefix = flagCharacter() + " "
+					prefix = flagCharacter()
 				}
 			case Messages.YellowFlag:
 				color = colornames.Yellow
-				prefix = flagCharacter() + " "
+				prefix = flagCharacter()
 			case Messages.DoubleYellowFlag:
 				color = colornames.Yellow
-				prefix = flagCharacter() + flagCharacter() + " "
+				prefix = flagCharacter() + flagCharacter()
 			case Messages.BlueFlag:
-				color = colornames.Blue
-				prefix = flagCharacter() + " "
+				color = colornames.Lightblue
+				prefix = flagCharacter()
 			case Messages.RedFlag:
 				color = colornames.Red
 				if strings.HasPrefix(r.rcMessages[x].Msg, "RED LIGHT") {
-					prefix = "● "
+					prefix = "●"
 				} else {
-					prefix = flagCharacter() + " "
+					prefix = flagCharacter()
 				}
 			case Messages.BlackAndWhite:
 				color = colornames.White

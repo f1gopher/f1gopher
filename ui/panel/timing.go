@@ -109,7 +109,7 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	t.table = giu.Table().FastMode(true).Flags(giu.TableFlagsResizable | giu.TableFlagsSizingFixedSame)
 	columns := []*giu.TableColumnWidget{
 		giu.TableColumn("Pos").InnerWidthOrWeight(25),
-		giu.TableColumn("Drv").InnerWidthOrWeight(25),
+		giu.TableColumn("Drv").InnerWidthOrWeight(35),
 		giu.TableColumn("Segment").InnerWidthOrWeight(240),
 		giu.TableColumn("Fastest").InnerWidthOrWeight(timeWidth),
 		giu.TableColumn("Gap").InnerWidthOrWeight(timeWidth),

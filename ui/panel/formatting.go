@@ -50,18 +50,14 @@ func fmtDuration(d time.Duration) string {
 		isNegative = true
 	}
 
+	// If no minutes then don't display zero but pad with spaces for display alignment
 	if isNegative {
-		// If no minutes then don't display zero but pad with spaces for display alignment
-		if minutes == 0 {
-			return fmt.Sprintf("-   %01d.%03d", seconds, milliseconds)
-		}
-
 		return fmt.Sprintf("-%01d:%02d.%03d", minutes, seconds, milliseconds)
 	}
 
 	// If no minutes then don't display zero but pad with spaces for display alignment
 	if minutes == 0 {
-		return fmt.Sprintf("   %01d.%03d", seconds, milliseconds)
+		return fmt.Sprintf("  %02d.%03d", seconds, milliseconds)
 	}
 
 	return fmt.Sprintf("%01d:%02d.%03d", minutes, seconds, milliseconds)
