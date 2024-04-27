@@ -259,6 +259,10 @@ func (i *improving) ProcessLocation(data Messages.Location) {
 
 	driverInfo := i.driverCurrentLaps[data.DriverNumber]
 
+	if driverInfo == nil {
+return
+	}
+
 	// Only need to update if the driver is on a fast lap or outlap
 	if driverInfo.location != Messages.OutLap && driverInfo.location != Messages.OnTrack {
 		// Clear any existing info when not on track
