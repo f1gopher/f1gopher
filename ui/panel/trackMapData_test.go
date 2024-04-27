@@ -49,6 +49,7 @@ var fudge = map[string]fudgeFactors{
 	"Suzuka Circuit":                              {rotation: 0.0},
 	"Yas Marina Circuit":                          {rotation: 1.5708},
 	"Las Vegas Strip Street Circuit":              {rotation: -1.5708},
+	"Shanghai International Circuit":              {rotation: -1.0}, // TODO - fix
 }
 
 // When running remember to modify in f1gopherlib:
