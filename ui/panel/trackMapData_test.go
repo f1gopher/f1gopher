@@ -41,7 +41,7 @@ var fudge = map[string]fudgeFactors{
 	"Jeddah Corniche Circuit":                     {rotation: -0.8726646},
 	"Losail International Circuit":                {rotation: 2.1},
 	"Marina Bay Street Circuit":                   {rotation: 0.0},
-	"Miami International Autodrome":               {rotation: 0.0},
+	"Miami International Autodrome":               {rotation: 3.14},
 	"Nürburgring":                                 {rotation: 0.3},
 	"Red Bull Ring":                               {rotation: 0.0},
 	"Silverstone Circuit":                         {rotation: 1.5708},
