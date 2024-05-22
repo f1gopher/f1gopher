@@ -17,30 +17,33 @@ package panel
 
 import (
 	"fmt"
-	"github.com/f1gopher/f1gopherlib/Messages"
-	"github.com/ungerik/go-cairo"
-	"golang.org/x/image/colornames"
 	"image"
 	"image/color"
 	"math"
 	"os"
 	"sort"
 	"time"
+
+	"github.com/f1gopher/f1gopherlib/Messages"
+	"github.com/ungerik/go-cairo"
+	"golang.org/x/image/colornames"
 )
 
 type trackInfo struct {
-	name        string
-	yearCreated int
-	outline     []image.Point
-	pitlane     []image.Point
-	scaling     float64
-	xOffset     int
-	yOffset     int
-	minX        int
-	maxX        int
-	minY        int
-	maxY        int
-	rotation    float64
+	name               string
+	yearCreated        int
+	outline            []image.Point
+	pitlane            []image.Point
+	scaling            float64
+	xOffset            int
+	yOffset            int
+	minX               int
+	maxX               int
+	minY               int
+	maxY               int
+	rotation           float64
+	finishLine         location
+	finishLineRotation float64
 }
 
 type trackMapStore struct {
@@ -53,13 +56,17 @@ type trackMapStore struct {
 	recordingLap int
 	targetDriver int
 
-	locations       []Messages.Location
-	trackStart      time.Time
-	trackEnd        time.Time
-	pitlaneStartLap int
-	pitlaneStart    time.Time
-	pitlaneEnd      time.Time
-	prevLocation    Messages.CarLocation
+	locations         []Messages.Location
+	trackStart        time.Time
+	trackEnd          time.Time
+	pitlaneStartLap   int
+	pitlaneStart      time.Time
+	pitlaneEnd        time.Time
+	prevLocation      Messages.CarLocation
+	totalSegments     int
+	lastDriverPos     map[int]location
+	lastDriverSegment map[int]int
+	startLocations    []location
 
 	backgroundColor color.RGBA
 	currentWidth    int
@@ -76,7 +83,10 @@ func CreateTrackMapStore() *trackMapStore {
 		currentWidth:  0,
 		currentHeight: 0,
 		// Transparent background by default
-		backgroundColor: color.RGBA{R: 0, G: 0, B: 0, A: 0},
+		backgroundColor:   color.RGBA{R: 0, G: 0, B: 0, A: 0},
+		lastDriverPos:     make(map[int]location),
+		lastDriverSegment: make(map[int]int),
+		startLocations:    []location{},
 	}
 
 	// Load known tracks
@@ -132,6 +142,9 @@ func (t *trackMapStore) SelectTrack(name string, year int) {
 	t.pitlaneEnd = time.Time{}
 	t.prevLocation = Messages.NoLocation
 	t.targetDriver = 0
+	t.lastDriverPos = make(map[int]location)
+	t.lastDriverSegment = make(map[int]int)
+	t.startLocations = []location{}
 }
 
 func (t *trackMapStore) MapAvailable(width int, height int) (available bool, scaling float64, xOffset int, yOffset int, rotation float64) {
@@ -234,6 +247,10 @@ func (t *trackMapStore) MapAvailable(width int, height int) (available bool, sca
 	return false, 0.0, 0, 0, 0
 }
 
+func (t *trackMapStore) ProcessEvent(data Messages.Event) {
+	t.totalSegments = data.TotalSegments
+}
+
 func (t *trackMapStore) ProcessLocation(data Messages.Location) {
 	if t.trackReady && t.pitlaneReady {
 		return
@@ -251,12 +268,28 @@ func (t *trackMapStore) ProcessLocation(data Messages.Location) {
 			}
 		}
 	}
+
+	t.lastDriverPos[data.DriverNumber] = location{x: data.X, y: data.Y}
 }
 
 func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 	if t.trackReady && t.pitlaneReady {
 		return
 	}
+
+	lastSegment, exists := t.lastDriverSegment[data.Number]
+	if exists {
+		// Crossed the timing line so add the current pos to the list
+		//
+		// TODO - need to do at the start of the last segment not repeatedly until we swicth to first segment
+		if data.Location == Messages.OnTrack &&
+			data.PreviousSegmentIndex == t.totalSegments-1 &&
+			lastSegment == t.totalSegments-2 {
+			t.startLocations = append(t.startLocations, t.lastDriverPos[data.Number])
+		}
+	}
+
+	t.lastDriverSegment[data.Number] = data.PreviousSegmentIndex
 
 	if t.targetDriver == 0 && data.Number != 0 && data.Location == Messages.OutLap {
 		t.targetDriver = data.Number
@@ -469,6 +502,20 @@ func (t *trackMapStore) ProcessTiming(data Messages.Timing) {
 		}
 
 		if t.trackReady && t.pitlaneReady {
+			t.currentTrack.finishLineRotation = 0.0
+
+			// Find the average start line position
+			xAvg := 0.0
+			yAvg := 0.0
+			for x := range t.startLocations {
+				xAvg += t.startLocations[x].x
+				yAvg += t.startLocations[x].y
+			}
+			xAvg = xAvg / float64(len(t.startLocations))
+			yAvg = yAvg / float64(len(t.startLocations))
+
+			t.currentTrack.finishLine = location{xAvg, yAvg}
+
 			// Store track for later use
 			t.storeMap(t.currentTrack)
 		}
@@ -541,6 +588,8 @@ var trackMapData = []trackInfo{
 			f.WriteString(fmt.Sprintf("\t\trotation: %f,\n", track.rotation))
 			f.WriteString(fmt.Sprintf("\t\txOffset: %d,\n", track.xOffset))
 			f.WriteString(fmt.Sprintf("\t\tyOffset: %d,\n", track.yOffset))
+			f.WriteString(fmt.Sprintf("\t\tfinishLine: location{%f, %f},\n", track.finishLine.x, track.finishLine.y))
+			f.WriteString(fmt.Sprintf("\t\tfinishLineRotation: %f,\n", track.finishLineRotation))
 			f.WriteString("\t},\n")
 		}
 	}

@@ -61,17 +61,15 @@ type fastLapInfo struct {
 }
 
 type improving struct {
-	dataSrc            f1gopherlib.F1GopherLib
-	startLineLocations map[string]location
+	dataSrc   f1gopherlib.F1GopherLib
+	trackMaps *trackMapStore
 
 	fastestDriverNum int
 	fastestLap       *fastLapInfo
 
 	driverCurrentLaps map[int]*fastLapInfo
 	driverFastestLaps map[int]*fastLapInfo
-	//lastDriverPos     map[int]location
 
-	startLine        location
 	lastSegmentIndex int
 
 	sortedDrivers []*fastLapInfo
@@ -81,41 +79,10 @@ type improving struct {
 	table *giu.TableWidget
 }
 
-func CreateImproving() Panel {
+func CreateImproving(trackMaps *trackMapStore) Panel {
 	return &improving{
-		lock: sync.Mutex{},
-		startLineLocations: map[string]location{
-			"Albert Park Grand Prix Circuit":              {x: -1384, y: -1155},
-			"Autodromo Enzo e Dino Ferrari":               {x: -1066, y: -4778},
-			"Autódromo Hermanos Rodríguez":                {x: -3524, y: -5861},
-			"Autódromo Internacional do Algarve":          {x: 0, y: 0},
-			"Autodromo Internazionale del Mugello":        {x: 0, y: 0},
-			"Autódromo José Carlos Pace":                  {x: -744, y: 1276},
-			"Autodromo Nazionale di Monza":                {x: 745, y: -5361},
-			"Bahrain International Circuit":               {x: -386, y: 1170},
-			"Bahrain International Circuit - Outer Track": {x: 0, y: 0},
-			"Baku City Circuit":                           {x: 1079, y: -585},
-			"Circuit de Barcelona-Catalunya":              {x: 1065, y: -741},
-			"Circuit de Monaco":                           {x: -5992, y: -9688},
-			"Circuit de Spa-Francorchamps":                {x: -307, y: 1113},
-			"Circuit Gilles Villeneuve":                   {x: 1000, y: 12351},
-			"Circuit of the Americas":                     {x: -769, y: -824},
-			"Circuit Paul Ricard":                         {x: -534, y: -1310},
-			"Circuit Park Zandvoort":                      {x: 846, y: 4604},
-			"Hungaroring":                                 {x: -1675, y: 42},
-			"Istanbul Park":                               {x: 0, y: 0},
-			"Jeddah Corniche Circuit":                     {x: -1673, y: 1259},
-			"Losail International Circuit":                {x: -1532, y: -207},
-			"Marina Bay Street Circuit":                   {x: 962, y: 271},
-			"Miami International Autodrome":               {x: 2171, y: -82},
-			"Nürburgring":                                 {x: 0, y: 0},
-			"Red Bull Ring":                               {x: 753, y: -1303},
-			"Silverstone Circuit":                         {x: -1831, y: 1109},
-			"Sochi Autodrom":                              {x: 0, y: 0},
-			"Suzuka Circuit":                              {x: 2232, y: -1467},
-			"Yas Marina Circuit":                          {x: 875, y: 2116},
-			"Las Vegas Strip Street Circuit":              {x: 2362, y: -280},
-		},
+		lock:      sync.Mutex{},
+		trackMaps: trackMaps,
 	}
 }
 
@@ -130,10 +97,8 @@ func (i *improving) Type() Type { return QualifyingImproving }
 
 func (i *improving) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	i.dataSrc = dataSrc
-	i.selectTrack(dataSrc.Track())
 	i.driverCurrentLaps = make(map[int]*fastLapInfo)
 	i.driverFastestLaps = make(map[int]*fastLapInfo)
-	// i.lastDriverPos = make(map[int]location)
 	i.table = nil
 	i.session = Messages.Qualifying0
 	i.sortedDrivers = make([]*fastLapInfo, 0)
@@ -143,20 +108,7 @@ func (i *improving) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 
 }
 
-func (i *improving) selectTrack(name string) {
-	loc, exists := i.startLineLocations[name]
-	if exists {
-		i.startLine = loc
-		return
-	}
-
-	// Default
-	i.startLine = location{}
-}
-
 func (i *improving) ProcessEvent(data Messages.Event) {
-	//i.lastSegmentIndex = (data.Sector1Segments + data.Sector2Segments + data.Sector3Segments) - 1
-
 	// Reset times when the session changes
 	if data.Type != i.session {
 		i.session = data.Type
@@ -202,7 +154,6 @@ func (i *improving) ProcessDrivers(data Messages.Drivers) {
 
 		i.driverCurrentLaps[data.Drivers[x].Number] = info
 		i.sortedDrivers = append(i.sortedDrivers, info)
-		//	i.lastDriverPos[data.Drivers[x].Number] = location{}
 	}
 
 	sort.Slice(
@@ -216,18 +167,6 @@ func (i *improving) ProcessTiming(data Messages.Timing) {
 	if len(i.driverCurrentLaps) == 0 {
 		return
 	}
-
-	// if i.startLine.x == 0 && i.startLine.y == 0 && i.lastSegmentIndex != -1 {
-	// 	segment := data.Segment[i.lastSegmentIndex]
-	// 	if data.Location == Messages.OnTrack || data.Location == Messages.OutLap &&
-	// 		segment == Messages.InvalidSegment && segment != Messages.PitlaneSegment {
-	// 		i.startLine = i.lastDriverPos[data.Number]
-	// 	} else {
-	// 		return
-	// 	}
-	// } else {
-	// 	return
-	// }
 
 	driverInfo := i.driverCurrentLaps[data.Number]
 
@@ -248,19 +187,19 @@ func (i *improving) ProcessTiming(data Messages.Timing) {
 }
 
 func (i *improving) ProcessLocation(data Messages.Location) {
+	if i.trackMaps.currentTrack == nil {
+		return
+	}
+
+	startLine := i.trackMaps.currentTrack.finishLine
 	if data.DriverNumber == 0 {
 		return
 	}
 
-	// if i.startLine.x == 0 && i.startLine.y == 0 {
-	// 	i.lastDriverPos[data.DriverNumber] = location{x: data.X, y: data.Y}
-	// 	return
-	// }
-
 	driverInfo := i.driverCurrentLaps[data.DriverNumber]
 
 	if driverInfo == nil {
-return
+		return
 	}
 
 	// Only need to update if the driver is on a fast lap or outlap
@@ -279,7 +218,7 @@ return
 	}
 
 	pos := location{x: data.X, y: data.Y}
-	distToStart := distance(i.startLine, pos)
+	distToStart := distance(startLine, pos)
 	update := false
 
 	// If the distance to start is above a threshold then do nothing
@@ -302,7 +241,7 @@ return
 				}
 
 				driverInfo.markers = append(driverInfo.markers, firstLoc)
-				driverInfo.lapStartTime = timeBetweenTwoPoints(i.startLine, driverInfo.prevLocation, data)
+				driverInfo.lapStartTime = timeBetweenTwoPoints(startLine, driverInfo.prevLocation, data)
 				driverInfo.prevLocation = data
 				driverInfo.isRecording = true
 				driverInfo.prevDistanceToStartLine = math.MaxFloat64
@@ -310,7 +249,6 @@ return
 			}
 		} else {
 			// we are recording so check if we need to stop
-
 			// If we are past the start then ignore distance changes so we don't end the lap early
 			if len(driverInfo.markers) < 20 {
 				return
@@ -328,7 +266,7 @@ return
 				//
 				// TODO - do some average/fiddling based on how far past the start line we are?
 
-				endTime := timeBetweenTwoPoints(i.startLine, driverInfo.prevLocation, data)
+				endTime := timeBetweenTwoPoints(startLine, driverInfo.prevLocation, data)
 				driverInfo.estimatedLapTime = endTime.Sub(driverInfo.lapStartTime)
 				driverInfo.isRecording = false
 
@@ -351,7 +289,7 @@ return
 
 				// Reset driver tracking
 				driverInfo.markers = []timedLocation{}
-				driverInfo.lapStartTime = timeBetweenTwoPoints(i.startLine, driverInfo.prevLocation, data)
+				driverInfo.lapStartTime = timeBetweenTwoPoints(startLine, driverInfo.prevLocation, data)
 				driverInfo.prevDistanceToStartLine = math.MaxFloat64
 				driverInfo.prevLocation = data
 				driverInfo.isRecording = true

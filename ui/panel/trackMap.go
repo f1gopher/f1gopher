@@ -58,9 +58,9 @@ type trackMap struct {
 
 const safetyCarDriverNum = 127
 
-func CreateTrackMap() Panel {
+func CreateTrackMap(trackMaps *trackMapStore) Panel {
 	return &trackMap{
-		mapStore:        CreateTrackMapStore(),
+		mapStore:        trackMaps,
 		driverPositions: map[int]Messages.Location{},
 		driverData:      map[int]trackMapInfo{},
 		showStoppedCars: true,
@@ -119,6 +119,8 @@ func (t *trackMap) ProcessTiming(data Messages.Timing) {
 }
 
 func (t *trackMap) ProcessEvent(data Messages.Event) {
+	t.mapStore.ProcessEvent(data)
+
 	t.eventLock.Lock()
 	t.event = data
 	t.eventLock.Unlock()
@@ -253,6 +255,22 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 			t.mapGc.ShowText(driverName)
 			t.mapGc.Stroke()
 		}
+
+		//// Finish/timing end line
+		//s = math.Sin(t.mapStore.currentTrack.finishLineRotation)
+		//c = math.Cos(t.mapStore.currentTrack.finishLineRotation)
+		//startX := -(t.mapStore.currentTrack.finishLine.x - float64(xOffset))
+		//startY := t.mapStore.currentTrack.finishLine.y - float64(yOffset)
+		//startX = startX*c - startY*s
+		//startY = startX*s + startY*c
+		//startX = startX / scaling
+		//startY = startY / scaling
+		//t.mapGc.SetSourceRGBA(1, 0, 0, 1)
+		//// t.mapGc.Rectangle(startX-10, startY-10, 20, 20)
+		//// t.mapGc.Fill()
+		//t.mapGc.MoveTo(startX, startY-10)
+		//t.mapGc.LineTo(startX, startY+10)
+		//t.mapGc.Stroke()
 
 		// Convert image to texture and release any previous texture
 		trueImg := t.mapGc.GetImage()

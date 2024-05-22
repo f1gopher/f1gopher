@@ -58,7 +58,10 @@ func createDataView(webView panel.Panel, changeView func(newView screen, info an
 	view.addPanel(panel.CreateRaceControlMessages())
 	view.addPanel(panel.CreateWeather())
 	view.addPanel(panel.CreateTeamRadio())
-	view.addPanel(panel.CreateTrackMap())
+
+	trackMaps := panel.CreateTrackMapStore()
+
+	view.addPanel(panel.CreateTrackMap(trackMaps))
 	view.addPanel(panel.CreateTelemetry())
 
 	// TODO - only create these for race session so that we don't have them processing data even when not displayed
@@ -67,7 +70,7 @@ func createDataView(webView panel.Panel, changeView func(newView screen, info an
 	view.addPanel(panel.CreateCatching())
 
 	// Quali only
-	view.addPanel(panel.CreateImproving())
+	view.addPanel(panel.CreateImproving(trackMaps))
 
 	view.addPanel(webView)
 

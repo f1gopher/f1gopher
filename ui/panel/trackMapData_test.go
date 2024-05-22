@@ -85,7 +85,7 @@ func TestCreateTrackMaps(t *testing.T) {
 		}
 
 		data, err := f1gopherlib.CreateReplay(
-			parser.Location|parser.Timing,
+			parser.Location|parser.Timing|parser.Event,
 			session,
 			"../../.cache",
 			flowControl.StraightThrough)
@@ -132,6 +132,9 @@ func TestCreateTrackMaps(t *testing.T) {
 
 			case msg := <-data.Timing():
 				mapStore.ProcessTiming(msg)
+
+			case msg := <-data.Event():
+				mapStore.ProcessEvent(msg)
 			}
 
 			if mapStore.trackReady && mapStore.pitlaneReady {
