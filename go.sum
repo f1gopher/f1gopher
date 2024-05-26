@@ -87,6 +87,10 @@ github.com/f1gopher/f1gopherlib v0.9.1-0.20240210154143-4b91e49b13ef h1:oZ6LicXb
 github.com/f1gopher/f1gopherlib v0.9.1-0.20240210154143-4b91e49b13ef/go.mod h1:U1D/cLtBgWE33Z0eJd3QPw6dOsjw8RAW8z9tKYCv2c4=
 github.com/f1gopher/f1gopherlib v0.9.1-0.20240221103349-46ee8a99748c h1:XaK0cMi8cgk9epIBr7GZJToGFCqkrzDaztfjgTbnQ3k=
 github.com/f1gopher/f1gopherlib v0.9.1-0.20240221103349-46ee8a99748c/go.mod h1:BzpUE/RgTRpsWuAqNNxKV8rux/viqHhDrve2nU3fw4c=
+github.com/f1gopher/f1gopherlib v1.0.1-0.20240413114410-c7bca7a14c91 h1:Wa91UOA3I28lBgd09ZZXJLdyjhDAvFtJGg/ycA7D/vw=
+github.com/f1gopher/f1gopherlib v1.0.1-0.20240413114410-c7bca7a14c91/go.mod h1:BzpUE/RgTRpsWuAqNNxKV8rux/viqHhDrve2nU3fw4c=
+github.com/f1gopher/f1gopherlib v1.0.1-0.20240519151416-7e33d5fad1b6 h1:lxZKqigFjgF+qAqO7RWJeAHNsU186x7TJNaGsxs442U=
+github.com/f1gopher/f1gopherlib v1.0.1-0.20240519151416-7e33d5fad1b6/go.mod h1:BzpUE/RgTRpsWuAqNNxKV8rux/viqHhDrve2nU3fw4c=
 github.com/f1gopher/signalr/v2 v2.0.0-20221210121059-1985aaf5fb97 h1:ake47TNb+vBn+r4dlB23hh6J/Hi0AZraq28ZaQrKBoQ=
 github.com/f1gopher/signalr/v2 v2.0.0-20221210121059-1985aaf5fb97/go.mod h1:I+Wlu0JSNF8jkGxWKW6X6B1hlLM/fMcJq23drxf3MkE=
 github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3 h1:baVdMKlASEHrj19iqjARrPbaRisD7EuZEVJj6ZMLl1Q=
@@ -187,6 +191,7 @@ golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.4.0 h1:Zr2JFtRQNX3BCZ8YtxRE9hNJYC8J6I1MVbMg6owUp18=
 golang.org/x/sys v0.4.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.17.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
+golang.org/x/sys v0.18.0 h1:DBdB3niSjOA/O0blCZBqDefyWNYveAYMNF1Wum0DYQ4=
 golang.org/x/sys v0.18.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
 golang.org/x/text v0.3.6/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
 golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
