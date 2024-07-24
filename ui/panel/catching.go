@@ -209,7 +209,7 @@ func (c *catching) Draw(width int, height int) (widgets []giu.Widget) {
 			driverName2 = c.driverNames[block.selectedDriver2Index]
 		}
 
-		blockWidgets = append(blockWidgets, giu.Dummy(0, 20))
+		blockWidgets = append(blockWidgets, giu.Dummy(0, 5))
 		if block.mode == AnotherDriver {
 			blockWidgets = append(blockWidgets,
 				giu.Row(
@@ -347,7 +347,7 @@ func (c *catching) driverComparison(driver1Number int, driver2Number int, driver
 		driver3Row = append(driver3Row, giu.Labelf("%d", driver3.position))
 	}
 
-	defaultColumnWidth := float32(timeWidth + 10.0)
+	defaultColumnWidth := float32(timeWidth + 2)
 
 	if mode == CarInfrontBehind {
 		for x := c.lap - 5; x < c.lap; x++ {
@@ -417,6 +417,14 @@ func (c *catching) driverComparison(driver1Number int, driver2Number int, driver
 		}
 	}
 
+	// Pad columns for any laps we don't yet have
+	for x := len(topRow); x < 7; x++ {
+		topRow = append(topRow, giu.TableColumn("").InnerWidthOrWeight(defaultColumnWidth))
+		driver1Row = append(driver1Row, giu.Label(""))
+		driver2Row = append(driver2Row, giu.Label(""))
+		driver3Row = append(driver3Row, giu.Label(""))
+	}
+
 	var gap time.Duration
 	if first != nil {
 		gap = second.gapToLeader - first.gapToLeader
@@ -435,21 +443,15 @@ func (c *catching) driverComparison(driver1Number int, driver2Number int, driver
 		driver2Row = append(driver2Row, giu.Labelf("%s", fmtDuration(gap)))
 	}
 
-	topRow = append(topRow, giu.TableColumn("Tire").InnerWidthOrWeight(timeWidth))
+	topRow = append(topRow, giu.TableColumn("Tire").InnerWidthOrWeight(50))
 	firstTire := "-"
 	var firstTireColor color.Color = color.RGBA{R: 255, G: 255, B: 255, A: 255}
-	firstLapsOnTire := "-"
 	if first != nil {
 		firstTire = first.tire.String()
 		firstTireColor = tireColor(first.tire)
-		firstLapsOnTire = fmt.Sprintf("%d", first.lapsOnTire)
 	}
 	driver1Row = append(driver1Row, giu.Style().SetColor(giu.StyleColorText, firstTireColor).To(giu.Label(firstTire)))
 	driver2Row = append(driver2Row, giu.Style().SetColor(giu.StyleColorText, tireColor(second.tire)).To(giu.Label(second.tire.String())))
-
-	topRow = append(topRow, giu.TableColumn("Laps On Tire").InnerWidthOrWeight(100))
-	driver1Row = append(driver1Row, giu.Label(firstLapsOnTire))
-	driver2Row = append(driver2Row, giu.Labelf("%d", second.lapsOnTire))
 
 	var rows []*giu.TableRowWidget
 	if first != nil {
@@ -465,7 +467,6 @@ func (c *catching) driverComparison(driver1Number int, driver2Number int, driver
 			driver3Row = append(driver3Row, giu.Labelf("%s", fmtDuration(gap)))
 		}
 		driver3Row = append(driver3Row, giu.Style().SetColor(giu.StyleColorText, tireColor(driver3.tire)).To(giu.Label(driver3.tire.String())))
-		driver3Row = append(driver3Row, giu.Labelf("%d", driver3.lapsOnTire))
 		rows = append(rows, giu.TableRow(driver3Row...))
 	}
 
