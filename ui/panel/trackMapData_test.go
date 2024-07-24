@@ -36,7 +36,7 @@ var fudge = map[string]fudgeFactors{
 	"Circuit of the Americas":                     {rotation: 0.0},
 	"Circuit Paul Ricard":                         {rotation: 0.0},
 	"Circuit Park Zandvoort":                      {rotation: 0.0},
-	"Hungaroring":                                 {rotation: 0.7853982}, // TODO - fix
+	"Hungaroring":                                 {rotation: 2.44}, // TODO - fix
 	"Istanbul Park":                               {rotation: -2.879793},
 	"Jeddah Corniche Circuit":                     {rotation: -0.8726646},
 	"Losail International Circuit":                {rotation: 2.1},
