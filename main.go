@@ -54,13 +54,12 @@ func main() {
 
 	sugar.Infof("F1Gopher v%s", Version)
 
-	giu.SetDefaultFontFromBytes(DefaultFont, 14.0)
-
 	wnd := giu.NewMasterWindow(
 		fmt.Sprintf("F1Gopher - v%s", Version),
 		1920,
 		1080,
 		0)
+	giu.Context.FontAtlas.SetDefaultFontFromBytes(DefaultFont, 14.0)
 	uiManager := ui.Create(sugar, wnd, config, *autoLivePtr)
 	wnd.Run(uiManager.Loop)
 }
