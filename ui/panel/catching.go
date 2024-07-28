@@ -275,7 +275,10 @@ func (c *catching) Draw(width int, height int) (widgets []giu.Widget) {
 					}),
 				))
 		}
-		blockWidgets = append(blockWidgets, block.table)
+
+		if block.selectedDriver1Number != NothingSelected && block.selectedDriver2Number != NothingSelected {
+			blockWidgets = append(blockWidgets, block.table)
+		}
 	}
 
 	return blockWidgets
