@@ -6,7 +6,7 @@ require (
 	github.com/AllenDang/giu v0.7.0
 	github.com/AllenDang/imgui-go v1.12.1-0.20221124025851-59b862ca5a0c
 	github.com/charmbracelet/lipgloss v0.13.0
-	github.com/f1gopher/f1gopherlib v1.0.1-0.20240724200105-391ca7d7bc2b
+	github.com/f1gopher/f1gopherlib v1.0.1-0.20240826140312-2ebdad040dda
 	github.com/gorilla/mux v1.8.1
 	github.com/hajimehoshi/go-mp3 v0.3.4
 	github.com/hajimehoshi/oto/v2 v2.4.2
