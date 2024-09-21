@@ -1,10 +1,10 @@
 module f1gopher
 
-go 1.22
+go 1.23
 
 require (
 	github.com/AllenDang/giu v0.6.2
-	github.com/f1gopher/f1gopherlib v1.0.1-0.20240724200105-391ca7d7bc2b
+	github.com/f1gopher/f1gopherlib v1.0.1-0.20240921101618-21c401dc8760
 	github.com/hajimehoshi/go-mp3 v0.3.4
 	github.com/hajimehoshi/oto/v2 v2.3.1
 	golang.org/x/image v0.0.0-20220302094943-723b81ca9867
@@ -44,7 +44,7 @@ require (
 	go.uber.org/multierr v1.9.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/net v0.27.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.22.0 // indirect
 	gopkg.in/eapache/queue.v1 v1.1.0 // indirect
 )

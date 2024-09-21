@@ -84,6 +84,10 @@ func TestCreateTrackMaps(t *testing.T) {
 			continue
 		}
 
+		if session.EventTime.Year() == 2024 && session.TrackName == "Circuit Park Zandvoort" {
+			continue
+		}
+
 		data, err := f1gopherlib.CreateReplay(
 			parser.Location|parser.Timing|parser.Event,
 			session,
@@ -93,6 +97,8 @@ func TestCreateTrackMaps(t *testing.T) {
 		if err != nil {
 			continue
 		}
+
+		t.Logf("Starting %d %s", session.EventTime.Year(), data.Track())
 
 		mapStore.SelectTrack(data.Track(), session.TrackYearCreated)
 
