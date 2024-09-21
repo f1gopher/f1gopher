@@ -432,7 +432,7 @@ func (c *catching) driverComparison(driver1Number int, driver2Number int, driver
 	}
 
 	var gap time.Duration
-	if first != nil {
+	if first != nil && second != nil {
 		gap = second.gapToLeader - first.gapToLeader
 	}
 
@@ -457,7 +457,11 @@ func (c *catching) driverComparison(driver1Number int, driver2Number int, driver
 		firstTireColor = tireColor(first.tire)
 	}
 	driver1Row = append(driver1Row, giu.Style().SetColor(giu.StyleColorText, firstTireColor).To(giu.Label(firstTire)))
-	driver2Row = append(driver2Row, giu.Style().SetColor(giu.StyleColorText, tireColor(second.tire)).To(giu.Label(second.tire.String())))
+	if driver2 != nil {
+		driver2Row = append(driver2Row, giu.Style().SetColor(giu.StyleColorText, tireColor(second.tire)).To(giu.Label(second.tire.String())))
+	} else {
+		driver2Row = append(driver2Row, giu.Label(""))
+	}
 
 	var rows []*giu.TableRowWidget
 	if first != nil {
