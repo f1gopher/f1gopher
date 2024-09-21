@@ -275,10 +275,7 @@ func (c *catching) Draw(width int, height int) (widgets []giu.Widget) {
 					}),
 				))
 		}
-
-		if block.selectedDriver1Number != NothingSelected && block.selectedDriver2Number != NothingSelected {
-			blockWidgets = append(blockWidgets, block.table)
-		}
+		blockWidgets = append(blockWidgets, block.table)
 	}
 
 	return blockWidgets
@@ -313,11 +310,8 @@ func (c *catching) driverComparison(driver1Number int, driver2Number int, driver
 			second = driver1
 		}
 	} else if mode == CarInfront || mode == Leader {
-		// If the driver is the leader then we show the car behind so no need to fiddle things
-		if driver1.position != 1 {
-			first = driver2
-			second = driver1
-		}
+		first = driver2
+		second = driver1
 	}
 
 	topRow := []*giu.TableColumnWidget{
@@ -522,9 +516,8 @@ func (c *catching) findCarInfront(currentDriver int) int {
 
 	currentPos := c.driverData[currentDriver].position
 
-	// If the car is the leader and tracking the driver in front show the driver behind for a useful comparison
 	if currentPos == 1 {
-		return c.driverOrder[currentPos+1]
+		return NothingSelected
 	}
 
 	return c.driverOrder[currentPos-1]
