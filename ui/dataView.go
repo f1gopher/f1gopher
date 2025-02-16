@@ -43,12 +43,15 @@ type dataView struct {
 	showTelemetry bool
 
 	layoutFunc func(width int, height int)
+
+	showCircleMap bool
 }
 
 func createDataView(webView panel.Panel, changeView func(newView screen, info any), isLiveSession bool) dataScreen {
 	view := dataView{
-		changeView: changeView,
-		panels:     map[panel.Type]panel.Panel{},
+		changeView:    changeView,
+		panels:        map[panel.Type]panel.Panel{},
+		showCircleMap: false,
 	}
 
 	view.layoutFunc = view.newLayout
@@ -72,6 +75,8 @@ func createDataView(webView panel.Panel, changeView func(newView screen, info an
 	// Quali only
 	view.addPanel(panel.CreateImproving(trackMaps))
 
+	view.addPanel(panel.CreateCircleMap())
+
 	view.addPanel(webView)
 
 	return &view
@@ -79,6 +84,10 @@ func createDataView(webView panel.Panel, changeView func(newView screen, info an
 
 func (d *dataView) toggleTelemetryView() {
 	d.showTelemetry = !d.showTelemetry
+}
+
+func (d *dataView) toggleCircleMap() {
+	d.showCircleMap = !d.showCircleMap
 }
 
 func (d *dataView) addPanel(panel panel.Panel) {
@@ -195,11 +204,22 @@ func (d *dataView) newLayout(width int, height int) {
 
 	telemetryWidth := float32(width) - gap - weatherWidth
 
-	w = giu.Window(panel.TrackMap.String()).
-		Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
-		Pos(0, row2StartY).
-		Size(trackMapWidth, row2Height)
-	w.Layout(d.panels[panel.TrackMap].Draw(int(trackMapWidth), int(float32(height)-row2StartY))...)
+	if (d.dataSrc.Session() == Messages.RaceSession ||
+		d.dataSrc.Session() == Messages.SprintSession) &&
+		d.showCircleMap {
+
+		w = giu.Window(panel.CircleMap.String()).
+			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+			Pos(0, row2StartY).
+			Size(trackMapWidth, row2Height)
+		w.Layout(d.panels[panel.CircleMap].Draw(int(trackMapWidth), int(float32(height)-row2StartY))...)
+	} else {
+		w = giu.Window(panel.TrackMap.String()).
+			Flags(giu.WindowFlagsNoDecoration|giu.WindowFlagsNoMove).
+			Pos(0, row2StartY).
+			Size(trackMapWidth, row2Height)
+		w.Layout(d.panels[panel.TrackMap].Draw(int(trackMapWidth), int(float32(height)-row2StartY))...)
+	}
 
 	// For none race session don't show the catch panel but move the race control messages into it's place
 	if d.dataSrc.Session() == Messages.RaceSession || d.dataSrc.Session() == Messages.SprintSession {
@@ -218,7 +238,6 @@ func (d *dataView) newLayout(width int, height int) {
 }
 
 func (d *dataView) processData() {
-
 	for {
 		select {
 		case <-d.ctx.Done():

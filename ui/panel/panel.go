@@ -36,6 +36,7 @@ const (
 	Telemetry
 	Catching
 	QualifyingImproving
+	CircleMap
 )
 
 func (t Type) String() string {
@@ -51,7 +52,9 @@ func (t Type) String() string {
 		"GapperPlot",
 		"Telemetry",
 		"Catching",
-		"QualifyingImproving"}[t]
+		"QualifyingImproving",
+		"CircleMap",
+	}[t]
 }
 
 type Panel interface {

@@ -18,13 +18,14 @@ package ui
 import (
 	"context"
 	"f1gopher/ui/webTimingView"
+	"sync"
+	"time"
+
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/flowControl"
 	"github.com/f1gopher/f1gopherlib/parser"
 	"go.uber.org/zap"
-	"sync"
-	"time"
 )
 
 type screen int
@@ -49,6 +50,7 @@ type dataScreen interface {
 	init(dataSrc f1gopherlib.F1GopherLib, config config)
 	close()
 	toggleTelemetryView()
+	toggleCircleMap()
 }
 
 type Manager struct {
@@ -139,6 +141,12 @@ func Create(logger *zap.SugaredLogger, wnd *giu.MasterWindow, config config, aut
 		manager.debugReplay.toggleTelemetryView()
 	}})
 
+	manager.wnd.RegisterKeyboardShortcuts(giu.WindowShortcut{Key: giu.KeySpace, Callback: func() {
+		manager.live.toggleCircleMap()
+		manager.replay.toggleCircleMap()
+		manager.debugReplay.toggleCircleMap()
+	}})
+
 	return &manager
 }
 
@@ -174,7 +182,6 @@ func (u *Manager) Loop() {
 }
 
 func (u *Manager) changeView(newView screen, info any) {
-
 	// If we are stopping a dataview then clear the web timing display
 	if u.view == Live && newView != Live {
 		u.live.close()
@@ -217,7 +224,6 @@ func (u *Manager) changeView(newView screen, info any) {
 			*u.currentSession,
 			u.config.sessionCache(),
 			flowControl.Realtime)
-
 		if err != nil {
 			u.logger.Errorln("Starting replay session", err)
 			return
