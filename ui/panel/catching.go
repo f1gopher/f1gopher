@@ -112,6 +112,12 @@ func (c *catching) ProcessDrivers(data Messages.Drivers) {
 	// +1 because 0 will be empty because positions aren't zero based
 	c.driverOrder = make([]int, len(c.driverNames)+1)
 	for x := range data.Drivers {
+		// Sometimes we don't have enough drivers in c.driverOrder
+		// possibly startup data issue
+		if data.Drivers[x].StartPosition >= len(c.driverOrder) {
+			continue
+		}
+
 		c.driverOrder[data.Drivers[x].StartPosition] = data.Drivers[x].Number
 	}
 }
