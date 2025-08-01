@@ -100,6 +100,7 @@ func (c *circleMap) ProcessEvent(data Messages.Event) {
 
 func (c *circleMap) ProcessTiming(data Messages.Timing) {
 	c.driverPositionsLock.Lock()
+	defer c.driverPositionsLock.Unlock()
 
 	driverData := c.driverData[data.Number]
 	if driverData == nil {
@@ -111,7 +112,6 @@ func (c *circleMap) ProcessTiming(data Messages.Timing) {
 	driverData.displayAngle = 0.01745329 * angleDegrees
 	driverData.hasStopped = data.Location == Messages.OutOfRace || data.Location == Messages.Stopped
 
-	c.driverPositionsLock.Unlock()
 }
 
 func (c *circleMap) Draw(width int, height int) []giu.Widget {
