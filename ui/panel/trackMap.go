@@ -23,8 +23,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/AllenDang/imgui-go"
-
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
@@ -48,7 +46,7 @@ type trackMap struct {
 	eventLock           sync.Mutex
 	showStoppedCars     bool
 
-	trackTexture       imgui.TextureID
+	trackTexture       *giu.Texture
 	trackTextureWidth  float32
 	trackTextureHeight float32
 	mapGc              *cairo.Surface
@@ -139,9 +137,9 @@ func (t *trackMap) Draw(width int, height int) []giu.Widget {
 
 	t.redraw(width, height, cars)
 
-	if t.trackTexture != 0 {
+	if t.trackTexture != nil {
 		return []giu.Widget{
-			giu.Image(giu.ToTexture(t.trackTexture)).Size(t.trackTextureWidth, t.trackTextureHeight),
+			giu.Image(t.trackTexture).Size(t.trackTextureWidth, t.trackTextureHeight),
 			giu.Row(
 				giu.Checkbox("Show Stopped Cars", &t.showStoppedCars),
 			),
@@ -276,7 +274,9 @@ func (t *trackMap) redraw(width int, height int, cars []Messages.Location) {
 		trueImg := t.mapGc.GetImage()
 		rgba := image.NewRGBA(trueImg.Bounds())
 		draw.Draw(rgba, trueImg.Bounds(), trueImg, image.Pt(0, 0), draw.Src)
-		giu.Context.GetRenderer().ReleaseImage(t.trackTexture)
-		t.trackTexture, _ = giu.Context.GetRenderer().LoadImage(rgba)
+
+		giu.NewTextureFromRgba(rgba, func(tex *giu.Texture) {
+			t.trackTexture = tex
+		})
 	}
 }

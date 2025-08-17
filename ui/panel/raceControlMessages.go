@@ -22,8 +22,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/AllenDang/cimgui-go/imgui"
 	"github.com/AllenDang/giu"
-	"github.com/AllenDang/imgui-go"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
 	"golang.org/x/image/colornames"
@@ -156,5 +156,5 @@ type ScrollToBottomWidget struct {
 }
 
 func (c *ScrollToBottomWidget) Build() {
-	imgui.SetScrollHereY(1.0)
+	imgui.SetScrollHereYV(1.0)
 }

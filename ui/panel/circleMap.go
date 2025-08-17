@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/AllenDang/giu"
-	"github.com/AllenDang/imgui-go"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
 	"github.com/ungerik/go-cairo"
@@ -43,7 +42,7 @@ type circleMap struct {
 	driverPositionsLock sync.Mutex
 	sessionStarted      bool
 
-	trackTexture       imgui.TextureID
+	trackTexture       *giu.Texture
 	trackTextureWidth  float32
 	trackTextureHeight float32
 	mapGc              *cairo.Surface
@@ -117,9 +116,9 @@ func (c *circleMap) ProcessTiming(data Messages.Timing) {
 func (c *circleMap) Draw(width int, height int) []giu.Widget {
 	c.redraw(width, height)
 
-	if c.trackTexture != 0 {
+	if c.trackTexture != nil {
 		return []giu.Widget{
-			giu.Image(giu.ToTexture(c.trackTexture)).Size(c.trackTextureWidth, c.trackTextureHeight),
+			giu.Image(c.trackTexture).Size(c.trackTextureWidth, c.trackTextureHeight),
 		}
 	}
 
@@ -188,8 +187,9 @@ func (c *circleMap) redraw(width int, height int) {
 	trueImg := c.mapGc.GetImage()
 	rgba := image.NewRGBA(trueImg.Bounds())
 	draw.Draw(rgba, trueImg.Bounds(), trueImg, image.Pt(0, 0), draw.Src)
-	giu.Context.GetRenderer().ReleaseImage(c.trackTexture)
-	c.trackTexture, _ = giu.Context.GetRenderer().LoadImage(rgba)
+	giu.NewTextureFromRgba(rgba, func(tex *giu.Texture) {
+		c.trackTexture = tex
+	})
 }
 
 func (c *circleMap) pointForAngle(angle float64, radius float64) (x, y float64) {

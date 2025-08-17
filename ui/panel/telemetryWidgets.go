@@ -16,7 +16,7 @@
 package panel
 
 import (
-	"github.com/AllenDang/imgui-go"
+	"github.com/AllenDang/cimgui-go/imgui"
 )
 
 type channelDisplaySelectWidget struct {

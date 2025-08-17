@@ -23,6 +23,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 
+	"github.com/AllenDang/cimgui-go/imgui"
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
 	"go.uber.org/zap"
@@ -54,13 +55,20 @@ func main() {
 
 	sugar.Infof("F1Gopher v%s", Version)
 
-	giu.SetDefaultFontFromBytes(DefaultFont, 14.0)
-
 	wnd := giu.NewMasterWindow(
 		fmt.Sprintf("F1Gopher - v%s", Version),
 		1920,
 		1080,
 		0)
+
+	giu.Context.FontAtlas.SetDefaultFontFromBytes(DefaultFont, 14.0)
+
+	// Need to disable viewports otherwise all the panels will float outside
+	// the master window
+	configFlags := giu.Context.IO().ConfigFlags()
+	configFlags &= ^imgui.ConfigFlagsViewportsEnable
+	giu.Context.IO().SetConfigFlags(configFlags)
+
 	uiManager := ui.Create(sugar, wnd, config, *autoLivePtr)
 	wnd.Run(uiManager.Loop)
 }

@@ -17,14 +17,15 @@ package panel
 
 import (
 	"bytes"
-	"github.com/AllenDang/giu"
-	"github.com/f1gopher/f1gopherlib"
-	"github.com/f1gopher/f1gopherlib/Messages"
-	"github.com/hajimehoshi/go-mp3"
-	"github.com/hajimehoshi/oto/v2"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/AllenDang/giu"
+	"github.com/ebitengine/oto/v3"
+	"github.com/f1gopher/f1gopherlib"
+	"github.com/f1gopher/f1gopherlib/Messages"
+	"github.com/hajimehoshi/go-mp3"
 )
 
 type teamRadio struct {
@@ -65,7 +66,11 @@ func (t *teamRadio) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	// Create a new audio player each time so we don't unpause and continue playing audio from the last session
 	var err error
 	var ready chan struct{}
-	t.audioPlayer, ready, err = oto.NewContext(48000, 2, 2)
+	otoConfig := &oto.NewContextOptions{
+		SampleRate:   48000,
+		ChannelCount: 2,
+	}
+	t.audioPlayer, ready, err = oto.NewContext(otoConfig)
 	if err != nil {
 		t.audioPlayer = nil
 		// TODO - log error
