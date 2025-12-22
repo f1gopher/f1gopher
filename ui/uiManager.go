@@ -112,7 +112,7 @@ func Create(logger *zap.SugaredLogger, wnd *giu.MasterWindow, config config, aut
 		config:     &manager.config,
 	}
 
-	manager.webTiming = webTimingView.CreateWebTimingView(manager.shutdownWg, manager.ctx, config.webTimingAddresses)
+	manager.webTiming = webTimingView.CreateWebTimingView(&manager.shutdownWg, manager.ctx, config.webTimingAddresses)
 	if manager.config.webTimingViewEnabled {
 		manager.webTiming.Start()
 	}

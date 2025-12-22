@@ -19,22 +19,23 @@ import (
 	"context"
 	"f1gopher/ui/panel"
 	"fmt"
-	"github.com/AllenDang/giu"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/f1gopher/f1gopherlib"
-	"github.com/f1gopher/f1gopherlib/Messages"
-	"github.com/gorilla/mux"
 	"net/http"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/AllenDang/giu"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/f1gopher/f1gopherlib"
+	"github.com/f1gopher/f1gopherlib/Messages"
+	"github.com/gorilla/mux"
 )
 
 const timeWidth = 11
 
 type WebTiming struct {
-	shutdownWg   sync.WaitGroup
+	shutdownWg   *sync.WaitGroup
 	ctx          context.Context
 	started      bool
 	stopTickChan chan bool
@@ -74,7 +75,7 @@ type WebTiming struct {
 }
 
 func CreateWebTimingView(
-	shutdownWg sync.WaitGroup,
+	shutdownWg *sync.WaitGroup,
 	ctx context.Context,
 	servers []string) *WebTiming {
 
@@ -196,16 +197,16 @@ func (w *WebTiming) runWebServer() {
 	router.HandleFunc("/", func(writer http.ResponseWriter, r *http.Request) {
 		abc := `<html>
 <title>F1Gopher</title>
-<head>    
+<head>
 	<meta charset="utf-8">
 </head>
-<script language="javascript">	
+<script language="javascript">
 	async function subscribe() {
   		let response = await fetch("/data");
-	
+
 		let message = await response.text();
 		document.getElementById("display").innerHTML = message;
-		
+
 		await new Promise(resolve => setTimeout(resolve, 1000));
 		await subscribe();
   	}

@@ -18,12 +18,13 @@ package ui
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/AllenDang/giu"
 	"github.com/f1gopher/f1gopherlib"
 	"github.com/f1gopher/f1gopherlib/Messages"
 	"github.com/sqweek/dialog"
-	"sync"
-	"time"
 )
 
 type mainMenu struct {
@@ -139,14 +140,7 @@ func (m *mainMenu) draw(width int, height int) {
 				m.changeView(OptionsMenu, nil)
 			}),
 			giu.Button("Quit").Size(buttonWidth, buttonHeight).OnClick(func() {
-				giu.Msgbox("Quit?", "Are you sure you want to quit?").
-					Buttons(giu.MsgboxButtonsYesNo).
-					ResultCallback(func(result giu.DialogResult) {
-						switch result {
-						case giu.DialogResultYes:
-							m.changeView(Quit, nil)
-						}
-					})
+				m.changeView(Quit, nil)
 			}),
 		)
 
