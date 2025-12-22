@@ -62,6 +62,7 @@ func (t *teamRadio) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	t.radioName = noRadioMessage
 	t.radioMsgs = make([]Messages.Radio, 0)
 	t.exitSession.Store(false)
+	t.isMuted = true
 
 	// Create a new audio player each time so we don't unpause and continue playing audio from the last session
 	var err error
