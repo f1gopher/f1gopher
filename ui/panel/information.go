@@ -34,6 +34,7 @@ type information struct {
 	eventLock     sync.Mutex
 	eventTime     time.Time
 	remainingTime time.Duration
+	eventHasDRS   bool
 }
 
 func CreateInformation(exit func(), isLiveSession bool) Panel {
@@ -60,6 +61,7 @@ func (i *information) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) 
 	// Clear previous session data
 	i.event = Messages.Event{}
 	i.remainingTime = 0
+	i.eventHasDRS = dataSrc.SessionStart().Year() <= 2025
 }
 
 func (i *information) ProcessEventTime(data Messages.EventTime) {
@@ -129,9 +131,13 @@ func (i *information) infoWidgets() *giu.RowWidget {
 
 	// These are only relevant for a race session
 	if i.event.Type == Messages.Race || i.event.Type == Messages.Sprint {
-		widgets = append(widgets,
-			giu.Label(fmt.Sprintf(", DRS: %v, Safety Car:",
-				i.event.DRSEnabled.String())))
+		if i.eventHasDRS {
+			widgets = append(widgets,
+				giu.Label(fmt.Sprintf(", DRS: %v, Safety Car:",
+					i.event.DRSEnabled.String())))
+		} else {
+			giu.Label(", Safety Car:")
+		}
 
 		widgets = append(widgets,
 			giu.Style().SetColor(giu.StyleColorText, safetyCarFormat(i.event.SafetyCar)).To(

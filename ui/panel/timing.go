@@ -51,6 +51,7 @@ type timing struct {
 	isRaceSession       bool
 	isSprintRaceSession bool
 	config              PanelConfig
+	eventHasDRS         bool
 
 	lastPitLossColor map[int]color.RGBA
 	lastPitLossValue map[int]string
@@ -105,6 +106,7 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 	t.isRaceSession = dataSrc.Session() == Messages.RaceSession
 	t.isSprintRaceSession = dataSrc.Session() == Messages.SprintSession
 	t.config = config
+	t.eventHasDRS = dataSrc.SessionStart().Year() <= 2025
 
 	t.table = giu.Table().FastMode(true).Flags(giu.TableFlagsResizable | giu.TableFlagsSizingFixedSame)
 	columns := []*giu.TableColumnWidget{
@@ -117,10 +119,14 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 		giu.TableColumn("S2").InnerWidthOrWeight(timeWidth),
 		giu.TableColumn("S3").InnerWidthOrWeight(timeWidth),
 		giu.TableColumn("Last Lap").InnerWidthOrWeight(timeWidth),
-		giu.TableColumn("DRS").InnerWidthOrWeight(50),
-		giu.TableColumn("Tire").InnerWidthOrWeight(50),
-		giu.TableColumn("Lap").InnerWidthOrWeight(30),
 	}
+
+	if t.eventHasDRS {
+		columns = append(columns, giu.TableColumn("DRS").InnerWidthOrWeight(50))
+	}
+
+	columns = append(columns, giu.TableColumn("Tire").InnerWidthOrWeight(50))
+	columns = append(columns, giu.TableColumn("Lap").InnerWidthOrWeight(30))
 
 	if t.isRaceSession {
 		columns = append(columns, []*giu.TableColumnWidget{
@@ -246,12 +252,14 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 				giu.Label(fmtDuration(drivers[x].Sector3))),
 			giu.Style().SetColor(giu.StyleColorText, timeColor(drivers[x].LastLapPersonalFastest, drivers[x].LastLapOverallFastest)).To(
 				giu.Label(fmtDuration(drivers[x].LastLap))),
-			giu.Style().SetColor(giu.StyleColorText, drsColor).To(
-				giu.Label(drs)),
-			giu.Style().SetColor(giu.StyleColorText, tireColor(drivers[x].Tire)).To(
-				giu.Label(drivers[x].Tire.String())),
-			giu.Label(fmt.Sprintf("%d", drivers[x].LapsOnTire)),
 		}
+
+		if t.eventHasDRS {
+			widgets = append(widgets, giu.Style().SetColor(giu.StyleColorText, drsColor).To(giu.Label(drs)))
+		}
+
+		widgets = append(widgets, giu.Style().SetColor(giu.StyleColorText, tireColor(drivers[x].Tire)).To(giu.Label(drivers[x].Tire.String())))
+		widgets = append(widgets, giu.Label(fmt.Sprintf("%d", drivers[x].LapsOnTire)))
 
 		trackLimits := ""
 		timePenalty := ""
@@ -425,8 +433,10 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 	}
 
 	if t.isRaceSession || t.isSprintRaceSession {
+		if t.eventHasDRS {
+			rowWidgets = append(rowWidgets, giu.Label(""))
+		}
 		rowWidgets = append(rowWidgets, []giu.Widget{
-			giu.Label(""),
 			giu.Label(""),
 			giu.Label(""),
 			giu.Style().SetColor(giu.StyleColorText, purpleColor).To(giu.Label(fmt.Sprintf("%d", t.fastestSpeedTrap))),

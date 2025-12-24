@@ -148,8 +148,8 @@ func (m *mainMenu) draw(width int, height int) {
 	if sessionName != "" {
 		if isLive {
 			giu.Window("Current Session").
-				Pos(float32(width-405), float32(height-75)).
-				Size(400, 70).
+				Pos(float32(width-495), float32(height-90)).
+				Size(490, 85).
 				Flags(giu.WindowFlagsNoResize|giu.WindowFlagsNoMove|giu.WindowFlagsNoCollapse).
 				Layout(
 					giu.Label(sessionName),
@@ -172,8 +172,8 @@ func (m *mainMenu) draw(width int, height int) {
 			}
 
 			giu.Window("Next Session").
-				Pos(float32(width-405), float32(height-75)).
-				Size(400, 70).
+				Pos(float32(width-495), float32(height-90)).
+				Size(490, 85).
 				Flags(giu.WindowFlagsNoResize|giu.WindowFlagsNoMove|giu.WindowFlagsNoCollapse).
 				Layout(
 					giu.Label(sessionName),
