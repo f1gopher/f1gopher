@@ -127,11 +127,17 @@ func (t *timing) Init(dataSrc f1gopherlib.F1GopherLib, config PanelConfig) {
 			giu.TableColumn("Pits").InnerWidthOrWeight(30),
 			giu.TableColumn("Pit Time").InnerWidthOrWeight(60),
 			giu.TableColumn("Pit Pos").InnerWidthOrWeight(50),
+			giu.TableColumn("Trk Lmts").InnerWidthOrWeight(50),
+			giu.TableColumn("Tme Pnlty").InnerWidthOrWeight(50),
+			giu.TableColumn("Final Pos").InnerWidthOrWeight(50),
 		}...)
 	} else if t.isSprintRaceSession {
 		columns = append(columns, []*giu.TableColumnWidget{
 			giu.TableColumn("Pitstops").InnerWidthOrWeight(60),
 			giu.TableColumn("Pit Time").InnerWidthOrWeight(timeWidth),
+			giu.TableColumn("Trk Lmts").InnerWidthOrWeight(50),
+			giu.TableColumn("Tme Pnlty").InnerWidthOrWeight(50),
+			giu.TableColumn("Final Pos").InnerWidthOrWeight(50),
 		}...)
 	}
 
@@ -247,6 +253,17 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 			giu.Label(fmt.Sprintf("%d", drivers[x].LapsOnTire)),
 		}
 
+		trackLimits := ""
+		timePenalty := ""
+		postPenaltyPos := ""
+
+		if drivers[x].TrackLimitsWarnings > 0 {
+			trackLimits = fmt.Sprintf("%d", drivers[x].TrackLimitsWarnings)
+		}
+		if drivers[x].TimePenaltySeconds > 0 {
+			timePenalty = fmt.Sprintf("%ds", drivers[x].TimePenaltySeconds)
+		}
+
 		if t.isRaceSession {
 			var potentialPositionChange string
 			positionColor := colornames.Green
@@ -309,11 +326,17 @@ func (t *timing) Draw(width int, height int) []giu.Widget {
 				giu.Label(lastPitlaneTime),
 				giu.Style().SetColor(giu.StyleColorText, positionColor).To(
 					giu.Label(potentialPositionChange)),
+				giu.Label(trackLimits),
+				giu.Label(timePenalty),
+				giu.Label(postPenaltyPos),
 			}...)
 		} else if t.isSprintRaceSession {
 			widgets = append(widgets, []giu.Widget{
 				giu.Label(fmt.Sprintf("%d", drivers[x].Pitstops)),
 				giu.Label(lastPitlaneTime),
+				giu.Label(trackLimits),
+				giu.Label(timePenalty),
+				giu.Label(postPenaltyPos),
 			}...)
 		}
 
