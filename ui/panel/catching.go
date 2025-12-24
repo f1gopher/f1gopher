@@ -169,7 +169,7 @@ func (c *catching) Draw(width int, height int) (widgets []giu.Widget) {
 			}),
 			giu.Button("Add Tracker").OnClick(func() {
 				newBlock := catchingBlock{
-					mode:                  AnotherDriver,
+					mode:                  CarInfront,
 					modeDropdown:          0,
 					selectedDriver1Index:  NothingSelected,
 					selectedDriver1Number: NothingSelected,
