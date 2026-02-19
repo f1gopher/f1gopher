@@ -1,8 +1,8 @@
 module f1gopher
 
-go 1.24.0
+go 1.26.0
 
-toolchain go1.24.5
+toolchain go1.26
 
 require (
 	github.com/AllenDang/cimgui-go v1.3.2-0.20250409185506-6b2ff1aa26b5

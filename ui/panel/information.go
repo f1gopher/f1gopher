@@ -136,7 +136,9 @@ func (i *information) infoWidgets() *giu.RowWidget {
 				giu.Label(fmt.Sprintf(", DRS: %v, Safety Car:",
 					i.event.DRSEnabled.String())))
 		} else {
-			giu.Label(", Safety Car:")
+			widgets = append(widgets,
+				giu.Label(fmt.Sprintf(", Overtake: %v, Safety Car:",
+					i.event.OvertakeEnabled.String())))
 		}
 
 		widgets = append(widgets,

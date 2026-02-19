@@ -146,7 +146,7 @@ func (d *dataView) newLayout(width int, height int) {
 
 	var gap float32 = 5.0
 	var timingWidth float32 = 1300
-	var timingHeight float32 = 430
+	var timingHeight float32 = 450
 	const weatherWidth float32 = 170
 	var trackMapWidth float32 = 900
 	var rcmWidth float32 = float32(width) - (timingWidth + gap)
