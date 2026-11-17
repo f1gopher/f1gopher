@@ -1,7 +1,5 @@
 github.com/AllenDang/cimgui-go v1.3.2-0.20250409185506-6b2ff1aa26b5 h1:IulPfLSfrjCzSr7TOn7777rl5qRMu39gEOxSTDm2wes=
 github.com/AllenDang/cimgui-go v1.3.2-0.20250409185506-6b2ff1aa26b5/go.mod h1:Fg1LjMFQs91yohW3SccUhqUeuNQEeL5KX3mgEjnDh7A=
-github.com/AllenDang/cimgui-go v1.4.0 h1:jrgAIysC7ToTaoFSL3wxsZUV9NOQyiTQ5cX3u27mANA=
-github.com/AllenDang/cimgui-go v1.4.0/go.mod h1:VCrH8Wyb3pZ2cYQM630LmdquB1OkeXMnmBv/oTDQn1c=
 github.com/AllenDang/giu v0.14.2-0.20250815060342-cea89c88f558 h1:HzuEvCqLyKPOHuYFwnC0fwAybZtyvfFy06J5XF6uBkM=
 github.com/AllenDang/giu v0.14.2-0.20250815060342-cea89c88f558/go.mod h1:te3VzNVMRpar+YwQRl5QwtMKGuldPAuwZeYRRkRFKNU=
 github.com/AllenDang/go-findfont v0.0.0-20200702051237-9f180485aeb8 h1:dKZMqib/yUDoCFigmz2agG8geZ/e3iRq304/KJXqKyw=
@@ -33,8 +31,6 @@ github.com/ebitengine/oto/v3 v3.4.0 h1:br0PgASsEWaoWn38b2Goe7m1GKFYfNgnsjSd5Gg+/
 github.com/ebitengine/oto/v3 v3.4.0/go.mod h1:IOleLVD0m+CMak3mRVwsYY8vTctQgOM0iiL6S7Ar7eI=
 github.com/ebitengine/purego v0.9.1 h1:a/k2f2HQU3Pi399RPW1MOaZyhKJL9w/xFpKAg4q1s0A=
 github.com/ebitengine/purego v0.9.1/go.mod h1:iIjxzd6CiRiOG0UyXP+V1+jWqUXVjPKLAI0mRfJZTmQ=
-github.com/f1gopher/f1gopherlib v1.0.1-0.20250315095251-d3bd12c9c481 h1:QFbatSx9BlsRv3lGiRCm+flhWEUx+hGv2HilF7o/JJw=
-github.com/f1gopher/f1gopherlib v1.0.1-0.20250315095251-d3bd12c9c481/go.mod h1:ExIqchrQjasxB148FZ92Gk6JYY4HLMSSBU3JBQ1HZPo=
 github.com/f1gopher/f1gopherlib v1.0.1-0.20260219135325-1723f81242b5 h1:lXbnQxOf/1uGsdgdQsKJMI3EcfgyzgBu95XfviV4vo8=
 github.com/f1gopher/f1gopherlib v1.0.1-0.20260219135325-1723f81242b5/go.mod h1:kfntAoQyaQY8eHxtDRSheCyzaaIgYCQfS62labNhbv0=
 github.com/f1gopher/signalr/v2 v2.0.0-20221210121059-1985aaf5fb97 h1:ake47TNb+vBn+r4dlB23hh6J/Hi0AZraq28ZaQrKBoQ=

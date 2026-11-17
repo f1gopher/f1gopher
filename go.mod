@@ -1,6 +1,6 @@
 module f1gopher
 
-go 1.26.0
+go 1.27
 
 require (
 	github.com/AllenDang/cimgui-go v1.3.2-0.20250409185506-6b2ff1aa26b5
